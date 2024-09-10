@@ -6,6 +6,8 @@
 
 #include "shader.h"
 #include "vec3.h"
+#include "sphere.h"
+#include "hittable_list.h"
 
 // Start up SDL and create a window
 bool init();
@@ -48,7 +50,8 @@ int SCREEN_WIDTH = 800;
 int SCREEN_HEIGHT = 1;
 
 // Other constants
-int MAX_NUM_OBJECTS = 64;
+int MAX_NUM_OBJECTS = 128;
+int SPHERE_UBO_SIZE = MAX_NUM_OBJECTS*32;
 
 void check_attributes()
 {
@@ -222,9 +225,6 @@ int main(int argc, char* args[])
     //   but writes are not as important
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    // SHADER CREATION:
-    Shader ourShader("shaders/testVertex.vs", "shaders/testFragment.fs");
-
     // We need to tell OpenGL how it should interpret the
     // vertex data:
     // (Note: This is because you can specify your own input
@@ -242,6 +242,9 @@ int main(int argc, char* args[])
     // Finally Enable the vertex attribute 
     // (using its location as an arg)
     glEnableVertexAttribArray(0);
+
+    // SHADER CREATION:
+    Shader ourShader("shaders/testVertex.vs", "shaders/testFragment.fs");
 
     // Raytracing setup
 
@@ -271,38 +274,29 @@ int main(int argc, char* args[])
     unsigned int uboBlock;
     glGenBuffers(1, &uboBlock);
     glBindBuffer(GL_UNIFORM_BUFFER, uboBlock);
-    glBufferData(GL_UNIFORM_BUFFER, 64, NULL, GL_STATIC_DRAW); // Allocate 16 bytes for UBO
+    glBufferData(GL_UNIFORM_BUFFER, 4096, NULL, GL_STATIC_DRAW); // Allocate 4096 bytes for UBO
+    // Note, can hold 128 32byte spheres
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     // Bind UBO in sphere to uboBlock
-    unsigned int uniformBlockIndexSphere = glGetUniformBlockIndex(ourShader.ID, "Sphere");
+    unsigned int uniformBlockIndexSphere = glGetUniformBlockIndex(ourShader.ID, "Spheres");
     glUniformBlockBinding(ourShader.ID, uniformBlockIndexSphere, 0);
-    glBindBufferRange(GL_UNIFORM_BUFFER, 0, uboBlock, 0, 64);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 0, uboBlock, 0, 4096);
 
-    // Add radius
-    float sphere_radius = 0.5f;
-    glBindBuffer(GL_UNIFORM_BUFFER, uboBlock);
-    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(float), &sphere_radius);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    // Add spheres
+    hittable_list objects = hittable_list();
 
-    // Add origin
-    vec3 sphere_origin = vec3(0.5, 0.7, 1);
-    float origin2[3] = {0.0f, 0.0f, -1.0f};
-    glBindBuffer(GL_UNIFORM_BUFFER, uboBlock);
-    glBufferSubData(GL_UNIFORM_BUFFER, 16, sizeof(float) * 3, origin2);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    sphere sphere1 = sphere(0.5f, vec3(0.0f, 0.0f, -1.0f), 0);
+    sphere sphere2 = sphere(100.0f, vec3(0.0f, -100.5f, -1.0f), 0);
+    sphere sphere3 = sphere(0.125f, vec3(-0.5f, 0.0f, -0.5f), 0);
+    sphere sphere4 = sphere(0.125f, vec3(0.5f, 0.0f, -0.5f), 0);
+    sphere sphere5 = sphere(500.0f, vec3(0.0f, 0.0f, 0.0f), 0);
 
-    // Add radius
-    sphere_radius = 100.0f;
-    glBindBuffer(GL_UNIFORM_BUFFER, uboBlock);
-    glBufferSubData(GL_UNIFORM_BUFFER, 32, sizeof(float), &sphere_radius);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-    // Add origin
-    float origin3[3] = {0.0f, -100.5f, -1.0f};
-    glBindBuffer(GL_UNIFORM_BUFFER, uboBlock);
-    glBufferSubData(GL_UNIFORM_BUFFER, 48, sizeof(float) * 3, origin3);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    objects.add(uboBlock, sphere1);
+    objects.add(uboBlock, sphere3);
+    objects.add(uboBlock, sphere4);
+    objects.add(uboBlock, sphere2);
+    objects.add(uboBlock, sphere5);
 
     while (!gQuit)
     {
@@ -321,6 +315,7 @@ int main(int argc, char* args[])
         ourShader.setVec3("delta_v", delta_v);
         ourShader.setVec3("camera_origin", camera_origin);
         ourShader.setVec3("viewport_top_left", viewport_top_left);
+        ourShader.setInt("num_spheres", objects.num);
 
         // Draw triangles
         glDrawArrays(GL_TRIANGLES, 0, 6);

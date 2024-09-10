@@ -7,38 +7,38 @@
 
 // Constants
 
-const double pi = 3.1415926535897932385;
+const float pi = 3.1415926535897932385;
 
 // Utility Functions
 
-inline double degrees_to_radians(double degrees) {
+inline float degrees_to_radians(float degrees) {
     return degrees * pi / 180.0;
 }
 
-inline double random_double() {
+inline float random_float() {
     // Returns a random real in [0,1).
     return std::rand() / (RAND_MAX + 1.0);
 }
 
-inline double random_double(double min, double max) {
+inline float random_float(float min, float max) {
     // Returns a random real in [min,max).
-    return min + (max-min)*random_double();
+    return min + (max-min)*random_float();
 }
 
 class vec3 {
     public:
-        double e[3];
+        float e[3];
 
         vec3() : e{0, 0, 0} {};
-        vec3(double e0, double e1, double e2) : e{e0, e1, e2} {};
+        vec3(float e0, float e1, float e2) : e{e0, e1, e2} {};
 
-        double x() const {return e[0];}
-        double y() const {return e[1];}
-        double z() const {return e[2];}
+        float x() const {return e[0];}
+        float y() const {return e[1];}
+        float z() const {return e[2];}
 
         vec3 operator-() const {return vec3(-e[0], e[1], -e[2]);}
-        double operator[](int i) const {return e[i];} 
-        double& operator[](int i) {return e[i];} // (remember, this is so I can do things like vec[0] = 2; (LH))
+        float operator[](int i) const {return e[i];} 
+        float& operator[](int i) {return e[i];} // (remember, this is so I can do things like vec[0] = 2; (LH))
         // (See the += operator below. I can only do that because of this line.)
 
         // More LH operators (that modify and return the address)
@@ -49,22 +49,22 @@ class vec3 {
             return *this;
         }
 
-        vec3& operator*=(double t) {
+        vec3& operator*=(float t) {
             e[0] *= t;
             e[1] *= t;
             e[2] *= t;
             return *this;
         }
 
-        vec3& operator/=(double t) {
+        vec3& operator/=(float t) {
             return *this *= 1/t;
         }
 
-        double length() const {
+        float length() const {
             return sqrt(length_squared());
         }
 
-        double length_squared() const {
+        float length_squared() const {
             return e[0]*e[0] + e[1]*e[1] + e[2]*e[2];
         }
 
@@ -75,11 +75,11 @@ class vec3 {
         }
 
         static vec3 random() {
-            return vec3(random_double(), random_double(), random_double());
+            return vec3(random_float(), random_float(), random_float());
         }
 
-        static vec3 random(double min, double max) {
-            return vec3(random_double(min, max), random_double(min, max), random_double(min, max)); 
+        static vec3 random(float min, float max) {
+            return vec3(random_float(min, max), random_float(min, max), random_float(min, max)); 
         }
 };
 
@@ -109,22 +109,22 @@ vec3 operator*(const vec3 &u, const vec3 &v)
     return vec3{u[0] * v[0], u[1] * v[1], u[2] * v[2]};
 }
 
-vec3 operator*(const vec3 &u, double t) 
+vec3 operator*(const vec3 &u, float t) 
 {
     return vec3{t*u[0], t*u[1], t*u[2]};
 }
 
-vec3 operator*(double t, const vec3 &u) 
+vec3 operator*(float t, const vec3 &u) 
 {
     return u * t;
 }
 
-vec3 operator/(const vec3 &u, double t) 
+vec3 operator/(const vec3 &u, float t) 
 {
     return (1/t) * u;
 }
 
-double dot(const vec3 &u, const vec3 &v)
+float dot(const vec3 &u, const vec3 &v)
 {
     return u[0] * v[0]
          + u[1] * v[1]
