@@ -46,7 +46,7 @@ float vertices[] = {
 
 // Screen setup values
 auto aspect_ratio = 16.0 / 9.0;
-int SCREEN_WIDTH = 800;
+int SCREEN_WIDTH = 1280;
 int SCREEN_HEIGHT = 1;
 
 // Other constants
@@ -311,6 +311,9 @@ int main(int argc, char* args[])
         ourShader.use();
 
         // Shader uniforms
+        ourShader.setInt("screen_height", SCREEN_HEIGHT);
+        ourShader.setInt("screen_height", SCREEN_WIDTH);
+
         ourShader.setVec3("delta_u", delta_u);
         ourShader.setVec3("delta_v", delta_v);
         ourShader.setVec3("camera_origin", camera_origin);

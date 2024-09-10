@@ -2,6 +2,9 @@
 
 layout(pixel_center_integer, origin_upper_left) in vec4 gl_FragCoord;
 
+uniform int screen_height;
+uniform int screen_width;
+
 uniform vec3 delta_u;
 uniform vec3 delta_v;
 
@@ -26,43 +29,16 @@ layout (std140) uniform Spheres
 
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig);
 
+vec3 raycast(vec3 camera_origin, vec2 rand_seed);
+
+float rand(vec2 co);
+float rand_range(vec2 co, float min, float max);
+
 void main()
 {
-  vec3 frag_loc = viewport_top_left + gl_FragCoord.x*delta_u + gl_FragCoord.y*delta_v;
-
-  vec3 ray_dir = frag_loc - camera_origin;
-
-  vec3 sphere_origin;
-  float sphere_radius;
-  float t = -1.0f;
-  float new_t;
-
-  for (int i=0; i<num_spheres; i++)
-  {
-    new_t = hit_sphere(spheres[i].origin, spheres[i].radius, ray_dir, camera_origin);
-    
-    if (t < 0 || (new_t < t && new_t > 0)) {
-      t = new_t;
-      sphere_origin = spheres[i].origin;
-      sphere_radius = spheres[i].radius;
-    } 
-  }
-
-  if (t > 0.0f)
-  {
-    vec3 sphere_point = camera_origin + ray_dir*t;
-    vec3 sphere_normal = normalize(sphere_point - sphere_origin);
-    if (dot(ray_dir, sphere_normal) >= 0) {
-      FragColour = vec4(0.2f*(sphere_normal.x + 1.0f), 0.2f*(sphere_normal.y + 1.0f), sphere_normal.z + 1.0f, 0.0f);
-    } else {
-      FragColour = 0.5f*vec4(sphere_normal.x + 1.0f, sphere_normal.y + 1.0f, sphere_normal.z + 1.0f, 0.0f);
-    }
-    return;
-  }
-
-  vec3 norm = normalize(ray_dir);
-  float a = 0.5f*(1.0f + norm.y);
-  FragColour = (1.0f-a)*vec4(1.0f, 1.0f, 1.0f, 0.0f) + a*vec4(0.5f, 0.7f, 1.0f, 0.0f);
+  vec2 rand_seed = vec2(gl_FragCoord.x / screen_width, gl_FragCoord.y / screen_height);
+ 
+  FragColour = vec4(raycast(camera_origin, rand_seed), 0.0f);
 }
 
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig)
@@ -85,4 +61,50 @@ float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig)
   } else {
     return -1.0f;
   }
+}
+
+vec3 raycast(vec3 camera_origin, vec2 rand_seed)
+{
+  vec3 frag_loc = viewport_top_left + gl_FragCoord.x*delta_u + gl_FragCoord.y*delta_v;
+
+  vec3 ray_dir = frag_loc - camera_origin;
+
+  vec3 sphere_origin;
+  float sphere_radius;
+  float t = -1.0f;
+  float new_t;
+  
+  for (int i=0; i<num_spheres; i++)
+  {
+    new_t = hit_sphere(spheres[i].origin, spheres[i].radius, ray_dir, camera_origin);
+    
+    if (t < 0 || (new_t < t && new_t > 0)) {
+      t = new_t;
+      sphere_origin = spheres[i].origin;
+      sphere_radius = spheres[i].radius;
+    } 
+  }
+
+  if (t > 0.0f)
+  {
+    vec3 sphere_point = camera_origin + ray_dir*t;
+    vec3 sphere_normal = normalize(sphere_point - sphere_origin);
+    if (dot(ray_dir, sphere_normal) >= 0) {
+       return vec3(0.2f*(sphere_normal.x + 1.0f), 0.2f*(sphere_normal.y + 1.0f), sphere_normal.z + 1.0f);
+    } else {
+      return 0.5f*vec3(sphere_normal.x + 1.0f, sphere_normal.y + 1.0f, sphere_normal.z + 1.0f);
+    }
+  }
+
+  vec3 norm = normalize(ray_dir);
+  float a = 0.5f*(1.0f + norm.y);
+  return (1.0f-a)*vec3(1.0f, 1.0f, 1.0f) + a*vec3(0.5f, 0.7f, 1.0f);
+}
+
+float rand(vec2 co){
+  return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+float rand_range(vec2 co, float min, float max){
+  return min + (max - min)*rand(co);
 }
