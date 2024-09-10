@@ -2,8 +2,7 @@
 
 layout(pixel_center_integer, origin_upper_left) in vec4 gl_FragCoord;
 
-uniform int screen_height;
-uniform int screen_width;
+uniform int num_samples;
 
 uniform vec3 delta_u;
 uniform vec3 delta_v;
@@ -29,16 +28,28 @@ layout (std140) uniform Spheres
 
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig);
 
-vec3 raycast(vec3 camera_origin, vec2 rand_seed);
+vec3 raycast(vec3 camera_origin, vec3 frag_loc);
 
 float rand(vec2 co);
 float rand_range(vec2 co, float min, float max);
 
 void main()
 {
-  vec2 rand_seed = vec2(gl_FragCoord.x / screen_width, gl_FragCoord.y / screen_height);
+  vec3 frag_loc;
+  vec2 rand_square;
+
+  vec3 colour = vec3(0.0f, 0.0f, 0.0f);
+
+  for (int i=0;i<num_samples;i++)
+  {
+    rand_square = vec2(rand_range(vec2(i, i+1), -0.5f, 0.5f), rand_range(vec2(i+1, i), -0.5f, 0.5f));
+    frag_loc = viewport_top_left + (gl_FragCoord.x + rand_square.x)*delta_u 
+                                  + (gl_FragCoord.y + rand_square.y)*delta_v;
+    
+    colour += raycast(camera_origin, frag_loc);
+  }
  
-  FragColour = vec4(raycast(camera_origin, rand_seed), 0.0f);
+  FragColour = vec4(colour/num_samples, 0.0f);
 }
 
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig)
@@ -63,10 +74,8 @@ float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig)
   }
 }
 
-vec3 raycast(vec3 camera_origin, vec2 rand_seed)
+vec3 raycast(vec3 camera_origin, vec3 frag_loc)
 {
-  vec3 frag_loc = viewport_top_left + gl_FragCoord.x*delta_u + gl_FragCoord.y*delta_v;
-
   vec3 ray_dir = frag_loc - camera_origin;
 
   vec3 sphere_origin;

@@ -49,6 +49,8 @@ auto aspect_ratio = 16.0 / 9.0;
 int SCREEN_WIDTH = 1280;
 int SCREEN_HEIGHT = 1;
 
+int NUM_SAMPLES = 50;
+
 // Other constants
 int MAX_NUM_OBJECTS = 128;
 int SPHERE_UBO_SIZE = MAX_NUM_OBJECTS*32;
@@ -311,8 +313,7 @@ int main(int argc, char* args[])
         ourShader.use();
 
         // Shader uniforms
-        ourShader.setInt("screen_height", SCREEN_HEIGHT);
-        ourShader.setInt("screen_height", SCREEN_WIDTH);
+        ourShader.setInt("num_samples", NUM_SAMPLES);
 
         ourShader.setVec3("delta_u", delta_u);
         ourShader.setVec3("delta_v", delta_v);
