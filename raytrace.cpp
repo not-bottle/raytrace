@@ -271,13 +271,13 @@ int main(int argc, char* args[])
     unsigned int uboBlock;
     glGenBuffers(1, &uboBlock);
     glBindBuffer(GL_UNIFORM_BUFFER, uboBlock);
-    glBufferData(GL_UNIFORM_BUFFER, 32, NULL, GL_STATIC_DRAW); // Allocate 16 bytes for UBO
+    glBufferData(GL_UNIFORM_BUFFER, 64, NULL, GL_STATIC_DRAW); // Allocate 16 bytes for UBO
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     // Bind UBO in sphere to uboBlock
     unsigned int uniformBlockIndexSphere = glGetUniformBlockIndex(ourShader.ID, "Sphere");
     glUniformBlockBinding(ourShader.ID, uniformBlockIndexSphere, 0);
-    glBindBufferRange(GL_UNIFORM_BUFFER, 0, uboBlock, 0, 32);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 0, uboBlock, 0, 64);
 
     // Add radius
     float sphere_radius = 0.5f;
@@ -290,6 +290,18 @@ int main(int argc, char* args[])
     float origin2[3] = {0.0f, 0.0f, -1.0f};
     glBindBuffer(GL_UNIFORM_BUFFER, uboBlock);
     glBufferSubData(GL_UNIFORM_BUFFER, 16, sizeof(float) * 3, origin2);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+    // Add radius
+    sphere_radius = 100.0f;
+    glBindBuffer(GL_UNIFORM_BUFFER, uboBlock);
+    glBufferSubData(GL_UNIFORM_BUFFER, 32, sizeof(float), &sphere_radius);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+    // Add origin
+    float origin3[3] = {0.0f, -100.5f, -1.0f};
+    glBindBuffer(GL_UNIFORM_BUFFER, uboBlock);
+    glBufferSubData(GL_UNIFORM_BUFFER, 48, sizeof(float) * 3, origin3);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     while (!gQuit)
