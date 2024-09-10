@@ -34,25 +34,30 @@ void main()
 
   vec3 sphere_origin;
   float sphere_radius;
-  float t;
+  float t = -1.0f;
+  float new_t;
 
   for (int i=0; i<num_spheres; i++)
   {
-    sphere_origin = spheres[i].origin;
-    sphere_radius = spheres[i].radius;
+    new_t = hit_sphere(spheres[i].origin, spheres[i].radius, ray_dir, camera_origin);
+    
+    if (t < 0 || (new_t < t && new_t > 0)) {
+      t = new_t;
+      sphere_origin = spheres[i].origin;
+      sphere_radius = spheres[i].radius;
+    } 
+  }
 
-    t = hit_sphere(sphere_origin, sphere_radius, ray_dir, camera_origin);
-    if (t > 0.0f)
-    {
+  if (t > 0.0f)
+  {
     vec3 sphere_point = camera_origin + ray_dir*t;
     vec3 sphere_normal = normalize(sphere_point - sphere_origin);
     if (dot(ray_dir, sphere_normal) >= 0) {
-      FragColour = vec4(1.0f, 0.7f, 0.5f, 0.0f);
+      FragColour = vec4(0.2f*(sphere_normal.x + 1.0f), 0.2f*(sphere_normal.y + 1.0f), sphere_normal.z + 1.0f, 0.0f);
     } else {
       FragColour = 0.5f*vec4(sphere_normal.x + 1.0f, sphere_normal.y + 1.0f, sphere_normal.z + 1.0f, 0.0f);
     }
     return;
-    }
   }
 
   vec3 norm = normalize(ray_dir);

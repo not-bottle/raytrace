@@ -292,11 +292,11 @@ int main(int argc, char* args[])
     sphere sphere4 = sphere(0.125f, vec3(0.5f, 0.0f, -0.5f), 0);
     sphere sphere5 = sphere(500.0f, vec3(0.0f, 0.0f, 0.0f), 0);
 
-    objects.add(uboBlock, sphere1);
-    objects.add(uboBlock, sphere3);
-    objects.add(uboBlock, sphere4);
-    objects.add(uboBlock, sphere2);
     objects.add(uboBlock, sphere5);
+    objects.add(uboBlock, sphere3);
+    objects.add(uboBlock, sphere1);
+    objects.add(uboBlock, sphere2);
+    objects.add(uboBlock, sphere4);
 
     while (!gQuit)
     {
