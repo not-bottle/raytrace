@@ -1,7 +1,6 @@
 #ifndef SPHERE_H
 #define SPHERE_H
 
-#include <iostream>
 #include <glad/glad.h>
 #include <SDL2/SDL.h>
 
@@ -20,15 +19,20 @@ class sphere : public hittable
                 radius{my_radius}, origin{my_origin}, material{my_material} {};
 
     virtual void add(unsigned int glBuffer, int offset) const override {
+
         glBindBuffer(GL_UNIFORM_BUFFER, glBuffer);
-        glBufferSubData(GL_UNIFORM_BUFFER, offset, sizeof(float), &radius);
+        glBufferSubData(GL_UNIFORM_BUFFER, offset, sizeof(int), &material);
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+        glBindBuffer(GL_UNIFORM_BUFFER, glBuffer);
+        glBufferSubData(GL_UNIFORM_BUFFER, offset + 4, sizeof(float), &radius);
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
         glBindBuffer(GL_UNIFORM_BUFFER, glBuffer);
         glBufferSubData(GL_UNIFORM_BUFFER, offset + 16, sizeof(float) * 3, &origin);
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-        std::cout << "sphere::add" << std::endl;
+
     }
 };
 

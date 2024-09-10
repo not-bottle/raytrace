@@ -14,6 +14,7 @@ out vec4 FragColour;
 
 struct sphere 
 {
+  int material;
   float radius;
   vec3 origin;
 };
