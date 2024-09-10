@@ -8,10 +8,13 @@ uniform vec3 delta_v;
 uniform vec3 camera_origin;
 uniform vec3 viewport_top_left;
 
-uniform vec3 sphere_origin;
-uniform float sphere_radius;
-
 out vec4 FragColour;
+
+layout (std140) uniform Sphere 
+{
+  float sphere_radius;
+  vec3  sphere_origin;
+};
 
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig);
 

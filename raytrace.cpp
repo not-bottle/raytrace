@@ -263,6 +263,32 @@ int main(int argc, char* args[])
     std::cout << "delta_u: " << delta_u << std::endl;
     std::cout << "delta_v: " << delta_v << std::endl;
 
+    // Set up UBO data
+
+    unsigned int uboBlock;
+    glGenBuffers(1, &uboBlock);
+    glBindBuffer(GL_UNIFORM_BUFFER, uboBlock);
+    glBufferData(GL_UNIFORM_BUFFER, 32, NULL, GL_STATIC_DRAW); // Allocate 16 bytes for UBO
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+    // Bind UBO in sphere to uboBlock
+    unsigned int uniformBlockIndexSphere = glGetUniformBlockIndex(ourShader.ID, "Sphere");
+    glUniformBlockBinding(ourShader.ID, uniformBlockIndexSphere, 0);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 0, uboBlock, 0, 32);
+
+    // Add radius
+    float sphere_radius = 0.5f;
+    glBindBuffer(GL_UNIFORM_BUFFER, uboBlock);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(float), &sphere_radius);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+    // Add origin
+    vec3 sphere_origin = vec3(0.5, 0.7, 1);
+    float origin2[3] = {0.0f, 0.0f, -1.0f};
+    glBindBuffer(GL_UNIFORM_BUFFER, uboBlock);
+    glBufferSubData(GL_UNIFORM_BUFFER, 16, sizeof(float) * 3, origin2);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
     while (!gQuit)
     {
         // Input
@@ -280,9 +306,6 @@ int main(int argc, char* args[])
         ourShader.setVec3("delta_v", delta_v);
         ourShader.setVec3("camera_origin", camera_origin);
         ourShader.setVec3("viewport_top_left", viewport_top_left);
-
-        ourShader.setFloat("sphere_radius", 0.5);
-        ourShader.setVec3("sphere_origin", vec3(0, 0, -1));
 
         // Draw triangles
         glDrawArrays(GL_TRIANGLES, 0, 6);
