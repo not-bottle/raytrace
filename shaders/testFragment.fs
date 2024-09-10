@@ -10,10 +10,15 @@ uniform vec3 viewport_top_left;
 
 out vec4 FragColour;
 
+struct sphere 
+{
+  float radius;
+  vec3 origin;
+};
+
 layout (std140) uniform Sphere 
 {
-  float sphere_radius;
-  vec3  sphere_origin;
+  sphere[64] spheres;
 };
 
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig);
@@ -23,6 +28,9 @@ void main()
   vec3 frag_loc = viewport_top_left + gl_FragCoord.x*delta_u + gl_FragCoord.y*delta_v;
 
   vec3 ray_dir = frag_loc - camera_origin;
+
+  vec3 sphere_origin = spheres[0].origin;
+  float sphere_radius = spheres[0].radius;
 
   float t = hit_sphere(sphere_origin, sphere_radius, ray_dir, camera_origin);
 

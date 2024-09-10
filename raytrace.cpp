@@ -47,6 +47,9 @@ auto aspect_ratio = 16.0 / 9.0;
 int SCREEN_WIDTH = 800;
 int SCREEN_HEIGHT = 1;
 
+// Other constants
+int MAX_NUM_OBJECTS = 64;
+
 void check_attributes()
 {
     // Check OpenGL attributes
