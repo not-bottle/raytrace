@@ -46,10 +46,10 @@ float vertices[] = {
 
 // Screen setup values
 auto aspect_ratio = 16.0 / 9.0;
-int SCREEN_WIDTH = 1280;
+int SCREEN_WIDTH = 800;
 int SCREEN_HEIGHT = 1;
 
-int NUM_SAMPLES = 50;
+int NUM_SAMPLES = 1;
 
 // Other constants
 int MAX_NUM_OBJECTS = 128;
@@ -294,7 +294,7 @@ int main(int argc, char* args[])
     sphere sphere4 = sphere(0.125f, vec3(0.5f, 0.0f, -0.5f), 0);
     sphere sphere5 = sphere(500.0f, vec3(0.0f, 0.0f, 0.0f), 0);
 
-    objects.add(uboBlock, sphere5);
+    //objects.add(uboBlock, sphere5);
     objects.add(uboBlock, sphere3);
     objects.add(uboBlock, sphere1);
     objects.add(uboBlock, sphere2);
