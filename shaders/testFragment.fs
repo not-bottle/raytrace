@@ -16,10 +16,18 @@ int max_bounces = 2;
 
 out vec4 FragColour;
 
+struct hit
+{
+  vec3 point;
+  vec3 normal;
+  bool hit;
+};
+
 struct ray
 {
   vec3 origin;
   vec3 dir;
+  bool colour;
 };
 
 struct sphere 
@@ -35,6 +43,7 @@ layout (std140) uniform Spheres
 };
 
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig);
+hit hit_any(vec3 ray_orig, vec3 ray_dir);
 
 vec3 raycast(vec3 ray_orig, vec3 ray_dir);
 
@@ -50,9 +59,6 @@ void main()
   vec2 rand_square;
 
   vec3 colour = vec3(0.0f, 0.0f, 0.0f);
-
-  FragColour = vec4(random_on_hemisphere(gl_FragCoord.xy, vec3(0.0f, 1.0f, 0.0f)), 0.0f);
-  return;
 
   for (int i=0;i<num_samples;i++)
   {
@@ -88,52 +94,59 @@ float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig)
   }
 }
 
-vec3 raycast(vec3 ray_orig, vec3 ray_dir)
+hit hit_any(vec3 ray_orig, vec3 ray_dir)
 {
-  vec3 sphere_origin;
-  float sphere_radius;
+  hit h;
+  h.point = vec3(0.0f, 0.0f, 0.0f);
+  h.normal = vec3(0.0f, 0.0f, 0.0f);
+  h.hit = false;
   float t = -1.0f;
   float new_t;
+  vec3 sphere_origin;
 
-  vec3 ray_colour = vec3(1.0f, 1.0f, 1.0f);
-  float bounce_factor = 1.0f;
-
-  for (int i=0; i<max_bounces; i++)
+  for (int i=0; i<num_spheres; i++)
   {
-    for (int i=0; i<num_spheres; i++)
-    {
-      new_t = hit_sphere(spheres[i].origin, spheres[i].radius, ray_dir, ray_orig);
-      
-      if (t < 0 || (new_t < t && new_t > 0)) {
-        t = new_t;
-        sphere_origin = spheres[i].origin;
-        sphere_radius = spheres[i].radius;
-      } 
-    }
-
-    if (t > 0.0f)
-    {
-      vec3 hit_point = ray_orig + ray_dir*t;
-      vec3 hit_normal = normalize(hit_point - sphere_origin);
-      if (dot(ray_dir, hit_normal) >= 0) {
-        ray_colour = vec3(1.0f, 0.7f, 0.5f);
-        break;
-      } else {
-        ray_orig = hit_point;
-        ray_dir = random_on_hemisphere(hit_normal.xy, hit_normal);
-        bounce_factor = bounce_factor * 0.5f;
-        continue;
-      }
-    }
-
-    vec3 norm = normalize(ray_dir);
-    float a = 0.5f*(1.0f + norm.y);
-    ray_colour = (1.0f-a)*vec3(1.0f, 1.0f, 1.0f) + a*vec3(0.5f, 0.7f, 1.0f);
-
-    break;
+    new_t = hit_sphere(spheres[i].origin, spheres[i].radius, ray_dir, ray_orig);
+    
+    if (t < 0 || (new_t < t && new_t > 0)) {
+      t = new_t;
+      sphere_origin = spheres[i].origin;
+    } 
   }
 
-  return ray_colour*bounce_factor;
+  if (t > 0.0f)
+  {
+    h.point = ray_orig + ray_dir*t;
+    h.normal = normalize(h.point - sphere_origin);
+    h.hit = true;
+  }
+
+  return h;
+}
+
+vec3 raycast(vec3 ray_orig, vec3 ray_dir)
+{
+  vec3 ray_colour = vec3(1.0f, 1.0f, 1.0f);
+  float bounce_factor = 1.0f;
+  bool bounce = false;
+
+  hit h = hit_any(ray_orig, ray_dir);
+
+  if (h.hit)
+  {
+    if (dot(ray_dir, h.normal) >= 0) {
+      ray_colour = vec3(1.0f, 0.7f, 0.5f);
+      return ray_colour;
+    } else {
+      return 0.5f*vec3(random_on_hemisphere(h.normal.xy, h.normal));
+    }
+  }
+
+  vec3 norm = normalize(ray_dir);
+  float a = 0.5f*(1.0f + norm.y);
+  ray_colour = (1.0f-a)*vec3(1.0f, 1.0f, 1.0f) + a*vec3(0.5f, 0.7f, 1.0f);
+
+  return ray_colour;
 }
 
 float rand(vec2 co){
