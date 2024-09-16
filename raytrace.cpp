@@ -34,22 +34,28 @@ const int GLMINORVERSION = 3;
 const int GLPROFILEMASK = SDL_GL_CONTEXT_PROFILE_CORE;
 
 float vertices[] = {
-    // first triangle 
-    -1.0f,  1.0f, 0.0f, // top left
-     1.0f,  1.0f, 0.0f, // top right
-     1.0f, -1.0f, 0.0f, // bottom right
-    // second triangle
-     1.0f, -1.0f, 0.0f, // bottom right
-    -1.0f, -1.0f, 0.0f, // bottom left
-    -1.0f,  1.0f, 0.0f, // top left
+    // positions         // texture coords
+     1.0f,  1.0f, 0.0f,    1.0f, 1.0f, // top right
+     1.0f, -1.0f, 0.0f,    1.0f, 0.0f, // bottom right
+    -1.0f, -1.0f, 0.0f,    0.0f, 0.0f, // bottom left
+    -1.0f,  1.0f, 0.0f,    0.0f, 1.0f  // top left
+};
+
+unsigned int indices[] = {
+    0, 1, 3,
+    1, 2, 3
 };
 
 // Screen setup values
 auto aspect_ratio = 16.0 / 9.0;
-int SCREEN_WIDTH = 800;
+int SCREEN_WIDTH = 1280;
 int SCREEN_HEIGHT = 1;
 
-int NUM_SAMPLES = 1;
+int RENDER_WIDTH = 320;
+int RENDER_HEIGHT = 1;
+
+int NUM_SAMPLES = 32;
+int BOUNCE_LIMIT = 50;
 
 // Other constants
 int MAX_NUM_OBJECTS = 128;
@@ -84,6 +90,9 @@ bool init()
     // Screen size calculations
     SCREEN_HEIGHT = int(SCREEN_WIDTH / aspect_ratio);
     SCREEN_HEIGHT = (SCREEN_HEIGHT < 1) ? 1 : SCREEN_HEIGHT;
+
+    RENDER_HEIGHT = int(RENDER_WIDTH / aspect_ratio);
+    RENDER_HEIGHT = (RENDER_HEIGHT < 1) ? 1 : RENDER_HEIGHT;
 
     bool success = true;
 
@@ -184,6 +193,36 @@ int main(int argc, char* args[])
         exit(1);
     }
 
+    unsigned int fbo;
+    glGenFramebuffers(1, &fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, RENDER_WIDTH, RENDER_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+
+    unsigned int rbo;
+    glGenRenderbuffers(1, &rbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, RENDER_WIDTH, RENDER_HEIGHT);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER == GL_FRAMEBUFFER_COMPLETE))
+    {
+        std::cout << "Frambuffer is complete!!!" << std::endl;
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
     // Queries??
     /* Get maximum number of vertex attributes we can pass to a vertex shader (it's 16) */
     int nrAttributes;
@@ -227,6 +266,11 @@ int main(int argc, char* args[])
     //   but writes are not as important
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
+    unsigned int EBO;
+    glGenBuffers(1, &EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
     // We need to tell OpenGL how it should interpret the
     // vertex data:
     // (Note: This is because you can specify your own input
@@ -240,30 +284,34 @@ int main(int argc, char* args[])
     // 6 - Offset in buffer
     // Note: This will be called on the VBO currently bound to
     //   GL_ARRAY_BUFFER (unchanged in this case)
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     // Finally Enable the vertex attribute 
     // (using its location as an arg)
     glEnableVertexAttribArray(0);
 
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
     // SHADER CREATION:
     Shader ourShader("shaders/testVertex.vs", "shaders/testFragment.fs");
+    Shader texShader("shaders/texVertex.vs", "shaders/texFragment.fs");
 
     // Raytracing setup
 
     auto focal_length = 1.0;
     auto viewport_height = 2.0; // (arbitrary)
-    auto viewport_width = (double(SCREEN_WIDTH) / double(SCREEN_HEIGHT)) * viewport_height;
+    auto viewport_width = (double(RENDER_WIDTH) / double(RENDER_HEIGHT)) * viewport_height;
 
     vec3 camera_origin = vec3(0.0f, 0.0f, 0.0f);
     vec3 viewport_top_left = camera_origin - vec3(0, 0, focal_length)
                                             - vec3(viewport_width/2, 0, 0)
                                              - vec3(0, -viewport_height/2, 0);
 
-    vec3 delta_u = vec3(viewport_width / SCREEN_WIDTH, 0.0f, 0.0f);
-    vec3 delta_v = vec3(0.0f, -viewport_height / SCREEN_HEIGHT, 0.0f);
+    vec3 delta_u = vec3(viewport_width / RENDER_WIDTH, 0.0f, 0.0f);
+    vec3 delta_v = vec3(0.0f, -viewport_height / RENDER_HEIGHT, 0.0f);
 
-    std::cout << "SCREEN_HEIGHT: " << SCREEN_HEIGHT << std::endl;
-    std::cout << "SCREEN_WIDTH: " << SCREEN_WIDTH << std::endl;
+    std::cout << "RENDER_HEIGHT: " << RENDER_HEIGHT << std::endl;
+    std::cout << "RENDER_WIDTH: " << RENDER_WIDTH << std::endl;
 
     std::cout << "viewport_height: " << viewport_height << std::endl;
     std::cout << "viewport_width: " << viewport_width << std::endl;
@@ -295,16 +343,21 @@ int main(int argc, char* args[])
     sphere sphere5 = sphere(500.0f, vec3(0.0f, 0.0f, 0.0f), 0);
 
     //objects.add(uboBlock, sphere5);
-    objects.add(uboBlock, sphere3);
+    //objects.add(uboBlock, sphere3);
     objects.add(uboBlock, sphere1);
     objects.add(uboBlock, sphere2);
-    objects.add(uboBlock, sphere4);
+    //objects.add(uboBlock, sphere4);
 
     while (!gQuit)
     {
         // Input
 
         // Rendering
+
+        // bind frame buffer for offscreen rendering
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
+
         // Clear colour buffer
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -314,6 +367,7 @@ int main(int argc, char* args[])
 
         // Shader uniforms
         ourShader.setInt("num_samples", NUM_SAMPLES);
+        ourShader.setInt("bounce_limit", BOUNCE_LIMIT);
 
         ourShader.setVec3("delta_u", delta_u);
         ourShader.setVec3("delta_v", delta_v);
@@ -322,7 +376,17 @@ int main(int argc, char* args[])
         ourShader.setInt("num_spheres", objects.num);
 
         // Draw triangles
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+        // bind back to default frame buffer to display rendered texture
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        texShader.use();
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
 
         // Events
         event_handling();

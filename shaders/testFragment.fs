@@ -12,7 +12,7 @@ uniform vec3 viewport_top_left;
 
 uniform int num_spheres;
 
-int max_bounces = 2;
+uniform int bounce_limit;
 
 out vec4 FragColour;
 
@@ -129,7 +129,7 @@ hit hit_any(vec3 ray_orig, vec3 ray_dir)
 
 ray bounce(ray r)
 {
-  if (r.count >= max_bounces) {
+  if (r.count >= bounce_limit) {
     r.origin = vec3(0.0f, 0.0f, 0.0f);
     r.bounce = false;
   } else {
