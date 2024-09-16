@@ -27,7 +27,9 @@ struct ray
 {
   vec3 origin;
   vec3 dir;
-  bool colour;
+  bool bounce;
+  int count;
+  float factor;
 };
 
 struct sphere 
@@ -45,6 +47,7 @@ layout (std140) uniform Spheres
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig);
 hit hit_any(vec3 ray_orig, vec3 ray_dir);
 
+ray bounce(ray r);
 vec3 raycast(vec3 ray_orig, vec3 ray_dir);
 
 float rand(vec2 co);
@@ -124,29 +127,47 @@ hit hit_any(vec3 ray_orig, vec3 ray_dir)
   return h;
 }
 
-vec3 raycast(vec3 ray_orig, vec3 ray_dir)
+ray bounce(ray r)
 {
-  vec3 ray_colour = vec3(1.0f, 1.0f, 1.0f);
-  float bounce_factor = 1.0f;
-  bool bounce = false;
+  if (r.count >= max_bounces) {
+    r.origin = vec3(0.0f, 0.0f, 0.0f);
+    r.bounce = false;
+  } else {
+    hit h = hit_any(r.origin, r.dir);
 
-  hit h = hit_any(ray_orig, ray_dir);
-
-  if (h.hit)
-  {
-    if (dot(ray_dir, h.normal) >= 0) {
-      ray_colour = vec3(1.0f, 0.7f, 0.5f);
-      return ray_colour;
+    if (h.hit)
+    {
+      r.origin = h.point;
+      r.dir = random_on_hemisphere(h.normal.xy, h.normal);
+      r.bounce = true;
+      r.count = r.count + 1;
+      r.factor = r.factor * 0.5f;
     } else {
-      return 0.5f*vec3(random_on_hemisphere(h.normal.xy, h.normal));
+      float a =  0.5f*(1.0f + normalize(r.dir).y);
+      r.origin = (1.0f-a)*vec3(1.0f, 1.0f, 1.0f) + a*vec3(0.5f, 0.7f, 1.0f);
+      r.bounce = false;
     }
   }
 
-  vec3 norm = normalize(ray_dir);
-  float a = 0.5f*(1.0f + norm.y);
-  ray_colour = (1.0f-a)*vec3(1.0f, 1.0f, 1.0f) + a*vec3(0.5f, 0.7f, 1.0f);
+  return r;
+}
 
-  return ray_colour;
+vec3 raycast(vec3 ray_orig, vec3 ray_dir)
+{
+  ray r;
+  r.count = 0;
+  r.factor = 1.0f;
+  r.origin = ray_orig;
+  r.dir = ray_dir;
+  r.bounce = true;
+
+  while(true) 
+  {
+    r = bounce(r);
+    if (!r.bounce) break;
+  }
+
+  return r.origin * r.factor;
 }
 
 float rand(vec2 co){
