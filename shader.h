@@ -118,6 +118,11 @@ public:
     {
         glUniform3f(glGetUniformLocation(ID, name.c_str()), v[0], v[1], v[2]);
     }
+    void setUint(const std::string &name, const uint32_t u) const
+    {
+        glUniform1ui(glGetUniformLocation(ID, name.c_str()), u);
+    }
+    
 };
 
 #endif

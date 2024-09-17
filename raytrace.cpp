@@ -48,14 +48,14 @@ unsigned int indices[] = {
 
 // Screen setup values
 auto aspect_ratio = 16.0 / 9.0;
-int SCREEN_WIDTH = 1280;
+int SCREEN_WIDTH = 1600;
 int SCREEN_HEIGHT = 1;
 
-int RENDER_WIDTH = 320;
+int RENDER_WIDTH = 400;
 int RENDER_HEIGHT = 1;
 
-int NUM_SAMPLES = 32;
-int BOUNCE_LIMIT = 50;
+int NUM_SAMPLES = 16;
+int BOUNCE_LIMIT = 32;
 
 // Other constants
 int MAX_NUM_OBJECTS = 128;
@@ -348,35 +348,40 @@ int main(int argc, char* args[])
     objects.add(uboBlock, sphere2);
     //objects.add(uboBlock, sphere4);
 
+    // First pass render to FBO texture
+
+    // bind frame buffer for offscreen rendering
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
+
+    // Clear colour buffer
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // Activate shader
+    ourShader.use();
+
+    // Shader uniforms
+    uint32_t timeValue = SDL_GetTicks();
+    ourShader.setUint("time_u32t", timeValue);
+
+    ourShader.setInt("num_samples", NUM_SAMPLES);
+    ourShader.setInt("bounce_limit", BOUNCE_LIMIT);
+
+    ourShader.setVec3("delta_u", delta_u);
+    ourShader.setVec3("delta_v", delta_v);
+    ourShader.setVec3("camera_origin", camera_origin);
+    ourShader.setVec3("viewport_top_left", viewport_top_left);
+    ourShader.setInt("num_spheres", objects.num);
+
+    // Draw triangles
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
     while (!gQuit)
     {
         // Input
 
         // Rendering
-
-        // bind frame buffer for offscreen rendering
-        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-        glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
-
-        // Clear colour buffer
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        // Activate shader
-        ourShader.use();
-
-        // Shader uniforms
-        ourShader.setInt("num_samples", NUM_SAMPLES);
-        ourShader.setInt("bounce_limit", BOUNCE_LIMIT);
-
-        ourShader.setVec3("delta_u", delta_u);
-        ourShader.setVec3("delta_v", delta_v);
-        ourShader.setVec3("camera_origin", camera_origin);
-        ourShader.setVec3("viewport_top_left", viewport_top_left);
-        ourShader.setInt("num_spheres", objects.num);
-
-        // Draw triangles
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // bind back to default frame buffer to display rendered texture
         glBindFramebuffer(GL_FRAMEBUFFER, 0);

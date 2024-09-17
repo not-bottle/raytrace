@@ -2,6 +2,8 @@
 
 layout(pixel_center_integer, origin_upper_left) in vec4 gl_FragCoord;
 
+uniform uint time_u32t;
+
 uniform int num_samples;
 
 uniform vec3 delta_u;
@@ -15,6 +17,10 @@ uniform int num_spheres;
 uniform int bounce_limit;
 
 out vec4 FragColour;
+
+struct xorshift32_state {
+  uint a;
+};
 
 struct hit
 {
@@ -50,6 +56,8 @@ hit hit_any(vec3 ray_orig, vec3 ray_dir);
 ray bounce(ray r);
 vec3 raycast(vec3 ray_orig, vec3 ray_dir);
 
+uint xorshift32(inout xorshift32_state state);
+float rand_float(inout xorshift32_state state);
 float rand(vec2 co);
 float rand_range(vec2 co, float min, float max);
 vec3 rand_range_vec(vec2 co, float min, float max);
@@ -58,6 +66,21 @@ vec3 random_on_hemisphere(vec2 co, vec3 normal);
 
 void main()
 {
+  float r, b, g;
+  xorshift32_state s;
+  s.a = floatBitsToUint(time_u32t * gl_FragCoord.x * gl_FragCoord.y);
+  for (int i = 0; i < gl_FragCoord.y; i++)
+  {
+    r = rand_float(s);
+    b = rand_float(s);
+    g = rand_float(s);
+  }
+
+  FragColour = vec4(0.0f, r, 0.0f, 0.0f);
+
+  return;
+
+
   vec3 frag_loc;
   vec2 rand_square;
 
@@ -71,8 +94,13 @@ void main()
     
     colour += raycast(camera_origin, frag_loc - camera_origin);
   }
- 
-  FragColour = vec4(colour/num_samples, 0.0f);
+  
+  colour = colour/num_samples;
+  colour.x = sqrt(colour.x);
+  colour.y = sqrt(colour.y);
+  colour.z = sqrt(colour.z);
+
+  FragColour = vec4(colour, 0.0f);
 }
 
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig)
@@ -85,9 +113,9 @@ float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig)
   float discriminant = h*h - a*c;
   if (discriminant >= 0) {
     float t = (h - sqrt(discriminant)) / a;
-    if (t <= 0.0f) {
+    if (t <= 0.0f && t >= 0.001) {
       t = (h + sqrt(discriminant)) / a;
-      if (t <= 0.0f) {
+      if (t <= 0.0f && t >= 0.001) {
         t = -1.0f;
       }
     }
@@ -129,6 +157,8 @@ hit hit_any(vec3 ray_orig, vec3 ray_dir)
 
 ray bounce(ray r)
 {
+  float factor_factor = 0.4f;
+
   if (r.count >= bounce_limit) {
     r.origin = vec3(0.0f, 0.0f, 0.0f);
     r.bounce = false;
@@ -138,10 +168,10 @@ ray bounce(ray r)
     if (h.hit)
     {
       r.origin = h.point;
-      r.dir = random_on_hemisphere(h.normal.xy, h.normal);
+      r.dir = h.normal + random_on_hemisphere(h.point.xy, h.normal);
       r.bounce = true;
       r.count = r.count + 1;
-      r.factor = r.factor * 0.5f;
+      r.factor = r.factor * factor_factor;
     } else {
       float a =  0.5f*(1.0f + normalize(r.dir).y);
       r.origin = (1.0f-a)*vec3(1.0f, 1.0f, 1.0f) + a*vec3(0.5f, 0.7f, 1.0f);
@@ -186,6 +216,27 @@ vec3 rand_range_vec(vec2 co, float min, float max) {
   return vec3(rand_range(co + vec2(0, 1), min, max), rand_range(co + vec2(1, 0), min, max), rand_range(co, min, max));
 }
 
+uint xorshift32(inout xorshift32_state state) {
+  uint x = state.a;
+  x ^= x << 13;
+  x ^= x >> 17;
+  x ^= x << 5;
+  return state.a = x;
+}
+
+float rand_float(inout xorshift32_state state) {
+  uint x = xorshift32(state);
+  const uint ieeeMantissa = 0x007FFFFFu;
+  const uint ieeeOne      = 0x3F800000u;
+  x &= ieeeMantissa;
+  x |= ieeeOne;
+
+  float f = uintBitsToFloat(x);
+  f = f - 1.0f;
+
+  return f;
+}
+
 vec3 random_unit_vector(vec2 co) {
   vec3 p;
   float lensq;
@@ -194,7 +245,7 @@ vec3 random_unit_vector(vec2 co) {
   {
     p = rand_range_vec(co + vec2(0, i), -1.0f, 1.0f);
     lensq = dot(p, p);
-    if (lensq <= 1)
+    if (1e-160 < lensq && lensq <= 1)
     {
       return p / sqrt(lensq);
     }
