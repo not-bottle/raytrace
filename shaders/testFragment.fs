@@ -72,9 +72,10 @@ void main()
 {
   vec4 tex = texture(screenTexture, TexCoords);
   uint seed = floatBitsToUint(tex.x + tex.y + tex.z);
+  seed ^= cantor(uint(gl_FragCoord.x), uint(gl_FragCoord.y));
 
   xorshift32_state state;
-  state.a = time_u32t + seed;
+  state.a = cantor(time_u32t, seed);
 
   FragColour = vec4(rand_vec(state), 0.0f);
   return;
