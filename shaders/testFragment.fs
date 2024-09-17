@@ -41,11 +41,23 @@ struct ray
   float factor;
 };
 
+struct material
+{
+  int id;
+  float param1;
+  vec3 albedo;
+};
+
 struct sphere 
 {
   int material;
   float radius;
   vec3 origin;
+};
+
+layout (std140) uniform Materials
+{
+  material[64] materials;
 };
 
 layout (std140) uniform Spheres 
@@ -76,9 +88,6 @@ void main()
 
   xorshift32_state state;
   state.a = cantor(time_u32t, seed);
-
-  FragColour = vec4(rand_vec(state), 0.0f);
-  return;
 
   vec3 frag_loc;
   vec2 rand_square;

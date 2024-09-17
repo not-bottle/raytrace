@@ -6,22 +6,23 @@
 
 #include "vec3.h"
 #include "hittable.h"
+#include "material.h"
 
 class sphere : public hittable
 {
     public:
     float radius;
     vec3 origin;
-    int material;
+    material *mat;
 
-    sphere() : radius{0.0f}, origin{vec3(0.0f, 0.0f, 0.0f)} , material{0} {};
-    sphere(float my_radius, vec3 my_origin, int my_material) : hittable{32},  
-                radius{my_radius}, origin{my_origin}, material{my_material} {};
+    sphere() : radius{0.0f}, origin{vec3(0.0f, 0.0f, 0.0f)} {};
+    sphere(float my_radius, vec3 my_origin, material *my_material) : hittable{32},  
+                radius{my_radius}, origin{my_origin}, mat{my_material} {};
 
     virtual void add(unsigned int glBuffer, int offset) const override {
 
         glBindBuffer(GL_UNIFORM_BUFFER, glBuffer);
-        glBufferSubData(GL_UNIFORM_BUFFER, offset, sizeof(int), &material);
+        glBufferSubData(GL_UNIFORM_BUFFER, offset, sizeof(int), &(mat->id));
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
         glBindBuffer(GL_UNIFORM_BUFFER, glBuffer);
@@ -31,8 +32,6 @@ class sphere : public hittable
         glBindBuffer(GL_UNIFORM_BUFFER, glBuffer);
         glBufferSubData(GL_UNIFORM_BUFFER, offset + 16, sizeof(float) * 3, &origin);
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-
     }
 };
 

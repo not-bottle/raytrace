@@ -9,6 +9,9 @@
 #include "sphere.h"
 #include "hittable_list.h"
 
+#include "material_list.h"
+#include "material.h"
+
 struct fb_help {
     unsigned int fbo;
     unsigned int rbo;
@@ -59,10 +62,10 @@ auto aspect_ratio = 16.0 / 9.0;
 int SCREEN_WIDTH = 1600;
 int SCREEN_HEIGHT = 1;
 
-int RENDER_WIDTH = 400;
+int RENDER_WIDTH = 800;
 int RENDER_HEIGHT = 1;
 
-int NUM_SAMPLES = 8;
+int NUM_SAMPLES = 32;
 uint32_t BOUNCE_LIMIT = 16;
 
 // Other constants
@@ -327,9 +330,32 @@ int main(int argc, char* args[])
 
     // Set up UBO data
 
-    unsigned int uboBlock;
-    glGenBuffers(1, &uboBlock);
-    glBindBuffer(GL_UNIFORM_BUFFER, uboBlock);
+    // MATERIALS
+
+    unsigned int matUBO;
+    glGenBuffers(1, &matUBO);
+    glBindBuffer(GL_UNIFORM_BUFFER, matUBO);
+    glBufferData(GL_UNIFORM_BUFFER, 4096, NULL, GL_STATIC_DRAW); // Allocate 4096 bytes for UBO
+    // Note, can hold 128 32byte spheres
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+    // Bind UBO in sphere to uboBlock
+    unsigned int uniformBlockIndexMat = glGetUniformBlockIndex(ourShader.ID, "Materials");
+    glUniformBlockBinding(ourShader.ID, uniformBlockIndexMat, 0);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 0, matUBO, 0, 4096);
+
+    // Add Materials
+    material_list materials = material_list();
+
+    lambertian mat1 = lambertian(vec3(1.0f, 0.7f, 0.5f));
+
+    materials.add(matUBO, mat1);
+
+    // SPHERES
+
+    unsigned int sphereUBO;
+    glGenBuffers(1, &sphereUBO);
+    glBindBuffer(GL_UNIFORM_BUFFER, sphereUBO);
     glBufferData(GL_UNIFORM_BUFFER, 4096, NULL, GL_STATIC_DRAW); // Allocate 4096 bytes for UBO
     // Note, can hold 128 32byte spheres
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
@@ -337,22 +363,22 @@ int main(int argc, char* args[])
     // Bind UBO in sphere to uboBlock
     unsigned int uniformBlockIndexSphere = glGetUniformBlockIndex(ourShader.ID, "Spheres");
     glUniformBlockBinding(ourShader.ID, uniformBlockIndexSphere, 0);
-    glBindBufferRange(GL_UNIFORM_BUFFER, 0, uboBlock, 0, 4096);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 0, sphereUBO, 0, 4096);
 
     // Add spheres
     hittable_list objects = hittable_list();
 
-    sphere sphere1 = sphere(0.5f, vec3(0.0f, 0.0f, -1.0f), 0);
-    sphere sphere2 = sphere(100.0f, vec3(0.0f, -100.5f, -1.0f), 0);
-    sphere sphere3 = sphere(0.125f, vec3(-0.5f, -0.25f, -0.5f), 0);
-    sphere sphere4 = sphere(0.125f, vec3(0.5f, -0.25f, -0.5f), 0);
-    sphere sphere5 = sphere(500.0f, vec3(0.0f, 0.0f, 0.0f), 0);
+    sphere sphere1 = sphere(0.5f, vec3(0.0f, 0.0f, -1.0f), &mat1);
+    sphere sphere2 = sphere(100.0f, vec3(0.0f, -100.5f, -1.0f), &mat1);
+    sphere sphere3 = sphere(0.125f, vec3(-0.5f, -0.25f, -0.5f), &mat1);
+    sphere sphere4 = sphere(0.125f, vec3(0.5f, -0.25f, -0.5f), &mat1);
+    sphere sphere5 = sphere(500.0f, vec3(0.0f, 0.0f, 0.0f), &mat1);
 
     //objects.add(uboBlock, sphere5);
-    objects.add(uboBlock, sphere3);
-    objects.add(uboBlock, sphere1);
-    objects.add(uboBlock, sphere2);
-    objects.add(uboBlock, sphere4);
+    objects.add(sphereUBO, sphere3);
+    objects.add(sphereUBO, sphere1);
+    objects.add(sphereUBO, sphere2);
+    objects.add(sphereUBO, sphere4);
 
     // First pass render to FBO texture
 
