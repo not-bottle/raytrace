@@ -2,6 +2,9 @@
 
 layout(pixel_center_integer, origin_upper_left) in vec4 gl_FragCoord;
 
+in vec2 TexCoords;
+uniform sampler2D screenTexture;
+
 uniform uint time_u32t;
 
 uniform int num_samples;
@@ -14,7 +17,7 @@ uniform vec3 viewport_top_left;
 
 uniform int num_spheres;
 
-uniform int bounce_limit;
+uniform uint bounce_limit;
 
 out vec4 FragColour;
 
@@ -34,7 +37,7 @@ struct ray
   vec3 origin;
   vec3 dir;
   bool bounce;
-  int count;
+  uint count;
   float factor;
 };
 
@@ -53,33 +56,28 @@ layout (std140) uniform Spheres
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig);
 hit hit_any(vec3 ray_orig, vec3 ray_dir);
 
-ray bounce(ray r);
-vec3 raycast(vec3 ray_orig, vec3 ray_dir);
+ray bounce(ray r, inout xorshift32_state state);
+vec3 raycast(vec3 ray_orig, vec3 ray_dir, inout xorshift32_state state);
 
 uint xorshift32(inout xorshift32_state state);
 float rand_float(inout xorshift32_state state);
-float rand(vec2 co);
-float rand_range(vec2 co, float min, float max);
-vec3 rand_range_vec(vec2 co, float min, float max);
-vec3 random_unit_vector(vec2 co);
-vec3 random_on_hemisphere(vec2 co, vec3 normal);
+vec3 rand_vec(inout xorshift32_state state);
+vec3 random_unit_vector(inout xorshift32_state state);
+vec3 random_on_hemisphere(inout xorshift32_state state, vec3 normal);
+
+uint cantor(uint k1, uint k2);
+float lcg(uint x);
 
 void main()
 {
-  float r, b, g;
-  xorshift32_state s;
-  s.a = floatBitsToUint(time_u32t * gl_FragCoord.x * gl_FragCoord.y);
-  for (int i = 0; i < gl_FragCoord.y; i++)
-  {
-    r = rand_float(s);
-    b = rand_float(s);
-    g = rand_float(s);
-  }
+  vec4 tex = texture(screenTexture, TexCoords);
+  uint seed = floatBitsToUint(tex.x + tex.y + tex.z);
 
-  FragColour = vec4(0.0f, r, 0.0f, 0.0f);
+  xorshift32_state state;
+  state.a = time_u32t + seed;
 
+  FragColour = vec4(rand_vec(state), 0.0f);
   return;
-
 
   vec3 frag_loc;
   vec2 rand_square;
@@ -88,11 +86,11 @@ void main()
 
   for (int i=0;i<num_samples;i++)
   {
-    rand_square = vec2(rand_range(vec2(i, i+1), -0.5f, 0.5f), rand_range(vec2(i+1, i), -0.5f, 0.5f));
+    rand_square = vec2(rand_float(state) - 0.5, rand_float(state) - 0.5);
     frag_loc = viewport_top_left + (gl_FragCoord.x + rand_square.x)*delta_u 
                                   + (gl_FragCoord.y + rand_square.y)*delta_v;
     
-    colour += raycast(camera_origin, frag_loc - camera_origin);
+    colour += raycast(camera_origin, frag_loc - camera_origin, state);
   }
   
   colour = colour/num_samples;
@@ -155,7 +153,7 @@ hit hit_any(vec3 ray_orig, vec3 ray_dir)
   return h;
 }
 
-ray bounce(ray r)
+ray bounce(ray r, inout xorshift32_state state)
 {
   float factor_factor = 0.4f;
 
@@ -168,9 +166,10 @@ ray bounce(ray r)
     if (h.hit)
     {
       r.origin = h.point;
-      r.dir = h.normal + random_on_hemisphere(h.point.xy, h.normal);
+      state.a = state.a + r.count;
+      r.dir = h.normal + random_on_hemisphere(state, h.normal);
       r.bounce = true;
-      r.count = r.count + 1;
+      r.count = r.count + 1u;
       r.factor = r.factor * factor_factor;
     } else {
       float a =  0.5f*(1.0f + normalize(r.dir).y);
@@ -182,10 +181,10 @@ ray bounce(ray r)
   return r;
 }
 
-vec3 raycast(vec3 ray_orig, vec3 ray_dir)
+vec3 raycast(vec3 ray_orig, vec3 ray_dir, inout xorshift32_state state)
 {
   ray r;
-  r.count = 0;
+  r.count = 0u;
   r.factor = 1.0f;
   r.origin = ray_orig;
   r.dir = ray_dir;
@@ -193,27 +192,11 @@ vec3 raycast(vec3 ray_orig, vec3 ray_dir)
 
   while(true) 
   {
-    r = bounce(r);
+    r = bounce(r, state);
     if (!r.bounce) break;
   }
 
   return r.origin * r.factor;
-}
-
-float rand(vec2 co){
-  return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
-}
-
-float rand_range(vec2 co, float min, float max){
-  return min + (max - min)*rand(co);
-}
-
-vec3 rand_vec(vec2 co) {
-  return vec3(rand(co + vec2(0, 1)), rand(co + vec2(1, 0)), rand(co));
-}
-
-vec3 rand_range_vec(vec2 co, float min, float max) {
-  return vec3(rand_range(co + vec2(0, 1), min, max), rand_range(co + vec2(1, 0), min, max), rand_range(co, min, max));
 }
 
 uint xorshift32(inout xorshift32_state state) {
@@ -237,24 +220,29 @@ float rand_float(inout xorshift32_state state) {
   return f;
 }
 
-vec3 random_unit_vector(vec2 co) {
+vec3 rand_vec(inout xorshift32_state state) {
+  return vec3(rand_float(state), rand_float(state), rand_float(state));
+}
+
+vec3 random_unit_vector(inout xorshift32_state state) {
   vec3 p;
   float lensq;
-  float i = 0.0f;
+  uint i = 0u;
   while (true)
   {
-    p = rand_range_vec(co + vec2(0, i), -1.0f, 1.0f);
+    state.a += i;
+    p = rand_vec(state);
     lensq = dot(p, p);
     if (1e-160 < lensq && lensq <= 1)
     {
       return p / sqrt(lensq);
     }
-    i = i + 0.01f;
+    i += 1u;
   }
 }
 
-vec3 random_on_hemisphere(vec2 co, vec3 normal) {
-  vec3 on_unit_sphere = random_unit_vector(co);
+vec3 random_on_hemisphere(inout xorshift32_state state, vec3 normal) {
+  vec3 on_unit_sphere = random_unit_vector(state);
   if (dot(on_unit_sphere, normal) >= 0) {
     return on_unit_sphere;
   } else {
@@ -262,3 +250,8 @@ vec3 random_on_hemisphere(vec2 co, vec3 normal) {
   }
 }
 
+uint cantor(uint k1, uint k2) {
+  uint x = (k1 + k2)*(k1 + k2 + 1u);
+  x = x >> 1;
+  return x + k2;
+}

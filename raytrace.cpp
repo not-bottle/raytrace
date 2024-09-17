@@ -9,6 +9,12 @@
 #include "sphere.h"
 #include "hittable_list.h"
 
+struct fb_help {
+    unsigned int fbo;
+    unsigned int rbo;
+    unsigned int tex;
+};
+
 // Start up SDL and create a window
 bool init();
 
@@ -20,6 +26,8 @@ void event_handling();
 
 // Free media and shut down SDL
 void close();
+
+void createFrameBuffer(fb_help &fb);
 
 // SDL Objects
 SDL_Window* gWindow = NULL; // Main window
@@ -51,11 +59,11 @@ auto aspect_ratio = 16.0 / 9.0;
 int SCREEN_WIDTH = 1600;
 int SCREEN_HEIGHT = 1;
 
-int RENDER_WIDTH = 400;
+int RENDER_WIDTH = 800;
 int RENDER_HEIGHT = 1;
 
-int NUM_SAMPLES = 16;
-int BOUNCE_LIMIT = 32;
+int NUM_SAMPLES = 512;
+uint32_t BOUNCE_LIMIT = 8;
 
 // Other constants
 int MAX_NUM_OBJECTS = 128;
@@ -193,35 +201,10 @@ int main(int argc, char* args[])
         exit(1);
     }
 
-    unsigned int fbo;
-    glGenFramebuffers(1, &fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    fb_help perlinfb, upscalefb;
 
-    unsigned int texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, RENDER_WIDTH, RENDER_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-
-    unsigned int rbo;
-    glGenRenderbuffers(1, &rbo);
-    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, RENDER_WIDTH, RENDER_HEIGHT);
-    glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
-
-    if(glCheckFramebufferStatus(GL_FRAMEBUFFER == GL_FRAMEBUFFER_COMPLETE))
-    {
-        std::cout << "Frambuffer is complete!!!" << std::endl;
-    }
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    createFrameBuffer(perlinfb);
+    createFrameBuffer(upscalefb);
 
     // Queries??
     /* Get maximum number of vertex attributes we can pass to a vertex shader (it's 16) */
@@ -294,7 +277,30 @@ int main(int argc, char* args[])
 
     // SHADER CREATION:
     Shader ourShader("shaders/testVertex.vs", "shaders/testFragment.fs");
+    Shader perlinShader("shaders/testVertex.vs", "shaders/perlin.fs");
     Shader texShader("shaders/texVertex.vs", "shaders/texFragment.fs");
+
+
+    // CREATE PERLIN NOISE TEXTURE
+    glBindFramebuffer(GL_FRAMEBUFFER, perlinfb.fbo);
+    glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
+
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    float PERLIN_GRID_SIZE = 400;
+    float PERLIN_CONTRAST = 1.5;
+    int PERLIN_LAYERS = 12;
+    float PERLIN_LACURNITY = 2;
+
+    perlinShader.use();
+
+    perlinShader.setFloat("GRID_SIZE", PERLIN_GRID_SIZE);
+    perlinShader.setFloat("CONTRAST", PERLIN_CONTRAST);
+    perlinShader.setInt("LAYERS", PERLIN_LAYERS);
+    perlinShader.setFloat("LACURNITY", PERLIN_CONTRAST);
+
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     // Raytracing setup
 
@@ -338,21 +344,22 @@ int main(int argc, char* args[])
 
     sphere sphere1 = sphere(0.5f, vec3(0.0f, 0.0f, -1.0f), 0);
     sphere sphere2 = sphere(100.0f, vec3(0.0f, -100.5f, -1.0f), 0);
-    sphere sphere3 = sphere(0.125f, vec3(-0.5f, 0.0f, -0.5f), 0);
-    sphere sphere4 = sphere(0.125f, vec3(0.5f, 0.0f, -0.5f), 0);
+    sphere sphere3 = sphere(0.125f, vec3(-0.5f, -0.25f, -0.5f), 0);
+    sphere sphere4 = sphere(0.125f, vec3(0.5f, -0.25f, -0.5f), 0);
     sphere sphere5 = sphere(500.0f, vec3(0.0f, 0.0f, 0.0f), 0);
 
     //objects.add(uboBlock, sphere5);
-    //objects.add(uboBlock, sphere3);
+    objects.add(uboBlock, sphere3);
     objects.add(uboBlock, sphere1);
     objects.add(uboBlock, sphere2);
-    //objects.add(uboBlock, sphere4);
+    objects.add(uboBlock, sphere4);
 
     // First pass render to FBO texture
 
     // bind frame buffer for offscreen rendering
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, upscalefb.fbo);
     glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
+    glBindTexture(GL_TEXTURE_2D, perlinfb.tex);
 
     // Clear colour buffer
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -366,7 +373,7 @@ int main(int argc, char* args[])
     ourShader.setUint("time_u32t", timeValue);
 
     ourShader.setInt("num_samples", NUM_SAMPLES);
-    ourShader.setInt("bounce_limit", BOUNCE_LIMIT);
+    ourShader.setUint("bounce_limit", BOUNCE_LIMIT);
 
     ourShader.setVec3("delta_u", delta_u);
     ourShader.setVec3("delta_v", delta_v);
@@ -389,7 +396,7 @@ int main(int argc, char* args[])
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         texShader.use();
-        glBindTexture(GL_TEXTURE_2D, texture);
+        glBindTexture(GL_TEXTURE_2D, upscalefb.tex);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 
@@ -404,3 +411,35 @@ int main(int argc, char* args[])
 
     return 0;
 }
+
+void createFrameBuffer(fb_help &fb)
+{
+    glGenFramebuffers(1, &(fb.fbo));
+    glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
+
+    glGenTextures(1, &(fb.tex));
+    glBindTexture(GL_TEXTURE_2D, fb.tex);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, RENDER_WIDTH, RENDER_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fb.tex, 0);
+
+    glGenRenderbuffers(1, &(fb.rbo));
+    glBindRenderbuffer(GL_RENDERBUFFER, fb.rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, RENDER_WIDTH, RENDER_HEIGHT);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, fb.rbo);
+
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER == GL_FRAMEBUFFER_COMPLETE))
+    {
+        std::cout << "Framebuffer is complete!!!" << std::endl;
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    return;
+};
