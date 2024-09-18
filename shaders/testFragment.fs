@@ -30,6 +30,7 @@ struct hit
   vec3 point;
   vec3 normal;
   bool hit;
+  bool interior;
   int mat;
 };
 
@@ -150,6 +151,7 @@ hit hit_any(vec3 ray_orig, vec3 ray_dir)
   h.point = vec3(0.0f, 0.0f, 0.0f);
   h.normal = vec3(0.0f, 0.0f, 0.0f);
   h.hit = false;
+  h.interior = false;
   float t = -1.0f;
   float new_t;
   sphere s;
@@ -167,9 +169,10 @@ hit hit_any(vec3 ray_orig, vec3 ray_dir)
   if (t > 0.0f)
   {
     h.point = ray_orig + ray_dir*t;
-    h.normal = normalize(h.point - s.origin);
+    h.normal = (h.point - s.origin) / s.radius;
     if (dot(h.normal, ray_dir) > 0) {
       h.normal = -h.normal;
+      h.interior = true;
     }
     h.mat = s.mat;
     h.hit = true;
@@ -210,6 +213,8 @@ void material_shade(inout hit h, inout ray r, inout xorshift32_state state)
     lambertian(m, h, r, state);
   } else if (m.type == 2) {
     metallic(m, h, r, state);
+  } else if (m.type == 3) {
+    dialectric(m, h, r, state);
   } else {
     r.albedo = shade_sky(r.dir, r.albedo);
     r.bounce = false;
@@ -231,7 +236,7 @@ void lambertian(material m, inout hit h, inout ray r, inout xorshift32_state sta
 
 void metallic(material m, inout hit h, inout ray r, inout xorshift32_state state)
 {
-  r.dir = r.dir + (-2*dot(r.dir, h.normal))*h.normal;
+  r.dir = reflect(r.dir, normalize(h.normal));
   r.dir = normalize(r.dir) + (m.param1 * random_unit_vector(state));
   r.albedo *= m.albedo;
 
@@ -244,7 +249,23 @@ void metallic(material m, inout hit h, inout ray r, inout xorshift32_state state
 
 void dialectric(material m, inout hit h, inout ray r, inout xorshift32_state state)
 {
-  r.dir = refract(r.dir, h.normal, m.param1);
+  float rel_refract_index = m.param1;
+  if (!h.interior) {
+    rel_refract_index = 1.0/rel_refract_index;
+  }
+
+  vec3 unit_dir = normalize(r.dir);
+
+  float cos_theta = min(dot(-unit_dir, h.normal), 1.0);
+  float sin_theta =  sqrt(1.0 - cos_theta*cos_theta);
+  bool cannot_refract = rel_refract_index * sin_theta > 1.0;
+
+  if (cannot_refract) {
+    r.dir = reflect(unit_dir, normalize(h.normal));
+  } else { 
+    r.dir = refract(unit_dir, normalize(h.normal), rel_refract_index);
+  }
+
   r.bounce = true;
   return;
 }

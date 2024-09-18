@@ -23,6 +23,7 @@ class material {
 
     material() : id{0} {};
     material(int my_type, vec3 my_albedo) : type{my_type}, albedo{my_albedo} {};
+    material(int my_type, float my_param) : type{my_type}, param1{my_param} {};
     material(int my_type, vec3 my_albedo, float my_param) : type{my_type}, albedo{my_albedo}, param1{my_param} {};
 
     void add(unsigned int glBuffer, int offset) {
@@ -55,6 +56,12 @@ class metallic : public material {
     public:
 
     metallic(vec3 my_albedo, float roughness) : material(METALLIC, my_albedo, roughness) {};
+};
+
+class dialectric : public material {
+    public:
+
+    dialectric(float rel_refract_index) : material(DIALECTRIC, rel_refract_index) {};
 };
 
 #endif

@@ -65,7 +65,7 @@ int SCREEN_HEIGHT = 1;
 int RENDER_WIDTH = 400;
 int RENDER_HEIGHT = 1;
 
-int NUM_SAMPLES = 1;
+int NUM_SAMPLES = 100;
 uint32_t BOUNCE_LIMIT = 50;
 
 // Other constants
@@ -349,7 +349,7 @@ int main(int argc, char* args[])
 
     lambertian mat_ground = lambertian(vec3(0.8, 0.8, 0.0));
     lambertian mat_centre = lambertian(vec3(0.1, 0.2, 0.5));
-    metallic mat_left = metallic(vec3(0.8, 0.8, 0.8), 0.3);
+    dialectric mat_left = dialectric(1.00 / 1.33);
     metallic mat_right = metallic(vec3(0.8, 0.6, 0.2), 1.0);
 
     materials.add(matUBO, mat_ground);
@@ -375,7 +375,7 @@ int main(int argc, char* args[])
     hittable_list objects = hittable_list();
 
     sphere ground = sphere(100.0, vec3(0.0, -100.5, -1.0), &mat_ground);
-    sphere centre = sphere(50, vec3(0.0, 0.0, 0), &mat_centre);;
+    sphere centre = sphere(0.5, vec3(0.0, 0.0, -1.2), &mat_centre);;
     sphere left = sphere(0.5, vec3(-1.0, 0.0, -1.0), &mat_left);;
     sphere right = sphere(0.5, vec3(1.0, 0.0, -1.0), &mat_right);;
 
