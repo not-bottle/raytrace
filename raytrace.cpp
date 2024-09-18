@@ -62,11 +62,11 @@ auto aspect_ratio = 16.0 / 9.0;
 int SCREEN_WIDTH = 1600;
 int SCREEN_HEIGHT = 1;
 
-int RENDER_WIDTH = 800;
+int RENDER_WIDTH = 400;
 int RENDER_HEIGHT = 1;
 
-int NUM_SAMPLES = 32;
-uint32_t BOUNCE_LIMIT = 16;
+int NUM_SAMPLES = 1;
+uint32_t BOUNCE_LIMIT = 50;
 
 // Other constants
 int MAX_NUM_OBJECTS = 128;
@@ -336,7 +336,7 @@ int main(int argc, char* args[])
     glGenBuffers(1, &matUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, matUBO);
     glBufferData(GL_UNIFORM_BUFFER, 4096, NULL, GL_STATIC_DRAW); // Allocate 4096 bytes for UBO
-    // Note, can hold 128 32byte spheres
+    // Note, can hold 128 32byte materials
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     // Bind UBO in sphere to uboBlock
@@ -347,9 +347,15 @@ int main(int argc, char* args[])
     // Add Materials
     material_list materials = material_list();
 
-    lambertian mat1 = lambertian(vec3(1.0f, 0.7f, 0.5f));
+    lambertian mat_ground = lambertian(vec3(0.8, 0.8, 0.0));
+    lambertian mat_centre = lambertian(vec3(0.1, 0.2, 0.5));
+    metallic mat_left = metallic(vec3(0.8, 0.8, 0.8), 0.3);
+    metallic mat_right = metallic(vec3(0.8, 0.6, 0.2), 1.0);
 
-    materials.add(matUBO, mat1);
+    materials.add(matUBO, mat_ground);
+    materials.add(matUBO, mat_centre);
+    materials.add(matUBO, mat_left);
+    materials.add(matUBO, mat_right);
 
     // SPHERES
 
@@ -362,23 +368,22 @@ int main(int argc, char* args[])
 
     // Bind UBO in sphere to uboBlock
     unsigned int uniformBlockIndexSphere = glGetUniformBlockIndex(ourShader.ID, "Spheres");
-    glUniformBlockBinding(ourShader.ID, uniformBlockIndexSphere, 0);
-    glBindBufferRange(GL_UNIFORM_BUFFER, 0, sphereUBO, 0, 4096);
+    glUniformBlockBinding(ourShader.ID, uniformBlockIndexSphere, 1);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 1, sphereUBO, 0, 4096);
 
     // Add spheres
     hittable_list objects = hittable_list();
 
-    sphere sphere1 = sphere(0.5f, vec3(0.0f, 0.0f, -1.0f), &mat1);
-    sphere sphere2 = sphere(100.0f, vec3(0.0f, -100.5f, -1.0f), &mat1);
-    sphere sphere3 = sphere(0.125f, vec3(-0.5f, -0.25f, -0.5f), &mat1);
-    sphere sphere4 = sphere(0.125f, vec3(0.5f, -0.25f, -0.5f), &mat1);
-    sphere sphere5 = sphere(500.0f, vec3(0.0f, 0.0f, 0.0f), &mat1);
+    sphere ground = sphere(100.0, vec3(0.0, -100.5, -1.0), &mat_ground);
+    sphere centre = sphere(50, vec3(0.0, 0.0, 0), &mat_centre);;
+    sphere left = sphere(0.5, vec3(-1.0, 0.0, -1.0), &mat_left);;
+    sphere right = sphere(0.5, vec3(1.0, 0.0, -1.0), &mat_right);;
 
     //objects.add(uboBlock, sphere5);
-    objects.add(sphereUBO, sphere3);
-    objects.add(sphereUBO, sphere1);
-    objects.add(sphereUBO, sphere2);
-    objects.add(sphereUBO, sphere4);
+    objects.add(sphereUBO, ground);
+    objects.add(sphereUBO, centre);
+    objects.add(sphereUBO, left);
+    objects.add(sphereUBO, right);
 
     // First pass render to FBO texture
 

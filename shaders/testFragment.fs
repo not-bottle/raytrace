@@ -30,6 +30,7 @@ struct hit
   vec3 point;
   vec3 normal;
   bool hit;
+  int mat;
 };
 
 struct ray
@@ -38,19 +39,20 @@ struct ray
   vec3 dir;
   bool bounce;
   uint count;
-  float factor;
+  vec3 albedo;
 };
 
 struct material
 {
   int id;
+  int type;
   float param1;
   vec3 albedo;
 };
 
 struct sphere 
 {
-  int material;
+  int mat;
   float radius;
   vec3 origin;
 };
@@ -65,11 +67,20 @@ layout (std140) uniform Spheres
   sphere[64] spheres;
 };
 
+bool near_zero(vec3 v);
+
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig);
 hit hit_any(vec3 ray_orig, vec3 ray_dir);
 
 ray bounce(ray r, inout xorshift32_state state);
 vec3 raycast(vec3 ray_orig, vec3 ray_dir, inout xorshift32_state state);
+
+vec3 shade_sky(vec3 dir, vec3 albedo);
+
+void material_shade(inout hit h, inout ray r, inout xorshift32_state state);
+void lambertian(material m, inout hit h, inout ray r, inout xorshift32_state state);
+void metallic(material m, inout hit h, inout ray r, inout xorshift32_state state);
+void dialectric(material m, inout hit h, inout ray r, inout xorshift32_state state);
 
 uint xorshift32(inout xorshift32_state state);
 float rand_float(inout xorshift32_state state);
@@ -104,11 +115,11 @@ void main()
   }
   
   colour = colour/num_samples;
-  colour.x = sqrt(colour.x);
-  colour.y = sqrt(colour.y);
-  colour.z = sqrt(colour.z);
-
   FragColour = vec4(colour, 0.0f);
+
+  float gamma = 2.2;
+
+  FragColour.rgb = pow(FragColour.rgb, vec3(1.0/gamma));
 }
 
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig)
@@ -121,9 +132,9 @@ float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig)
   float discriminant = h*h - a*c;
   if (discriminant >= 0) {
     float t = (h - sqrt(discriminant)) / a;
-    if (t <= 0.0f && t >= 0.001) {
+    if (!(0.001 < t)) {
       t = (h + sqrt(discriminant)) / a;
-      if (t <= 0.0f && t >= 0.001) {
+      if (!(0.001 < t)) {
         t = -1.0f;
       }
     }
@@ -141,7 +152,7 @@ hit hit_any(vec3 ray_orig, vec3 ray_dir)
   h.hit = false;
   float t = -1.0f;
   float new_t;
-  vec3 sphere_origin;
+  sphere s;
 
   for (int i=0; i<num_spheres; i++)
   {
@@ -149,14 +160,18 @@ hit hit_any(vec3 ray_orig, vec3 ray_dir)
     
     if (t < 0 || (new_t < t && new_t > 0)) {
       t = new_t;
-      sphere_origin = spheres[i].origin;
+      s = spheres[i];
     } 
   }
 
   if (t > 0.0f)
   {
     h.point = ray_orig + ray_dir*t;
-    h.normal = normalize(h.point - sphere_origin);
+    h.normal = normalize(h.point - s.origin);
+    if (dot(h.normal, ray_dir) > 0) {
+      h.normal = -h.normal;
+    }
+    h.mat = s.mat;
     h.hit = true;
   }
 
@@ -165,10 +180,8 @@ hit hit_any(vec3 ray_orig, vec3 ray_dir)
 
 ray bounce(ray r, inout xorshift32_state state)
 {
-  float factor_factor = 0.4f;
-
   if (r.count >= bounce_limit) {
-    r.origin = vec3(0.0f, 0.0f, 0.0f);
+    r.albedo = vec3(0.0f, 0.0f, 0.0f);
     r.bounce = false;
   } else {
     hit h = hit_any(r.origin, r.dir);
@@ -176,14 +189,12 @@ ray bounce(ray r, inout xorshift32_state state)
     if (h.hit)
     {
       r.origin = h.point;
-      state.a = state.a + r.count;
-      r.dir = h.normal + random_on_hemisphere(state, h.normal);
-      r.bounce = true;
       r.count = r.count + 1u;
-      r.factor = r.factor * factor_factor;
+
+      material_shade(h, r, state);
+
     } else {
-      float a =  0.5f*(1.0f + normalize(r.dir).y);
-      r.origin = (1.0f-a)*vec3(1.0f, 1.0f, 1.0f) + a*vec3(0.5f, 0.7f, 1.0f);
+      r.albedo *= shade_sky(r.dir, r.albedo);
       r.bounce = false;
     }
   }
@@ -191,13 +202,61 @@ ray bounce(ray r, inout xorshift32_state state)
   return r;
 }
 
+void material_shade(inout hit h, inout ray r, inout xorshift32_state state)
+{
+  material m = materials[h.mat];
+
+  if(m.type == 1) {
+    lambertian(m, h, r, state);
+  } else if (m.type == 2) {
+    metallic(m, h, r, state);
+  } else {
+    r.albedo = shade_sky(r.dir, r.albedo);
+    r.bounce = false;
+  }
+
+  return;
+}
+
+void lambertian(material m, inout hit h, inout ray r, inout xorshift32_state state)
+{
+  r.dir = h.normal + random_on_hemisphere(state, h.normal);
+  if (near_zero(r.dir)) {
+    r.dir  = h.normal;
+  }
+  r.bounce = true;
+  r.albedo *= m.albedo;
+  return;
+}
+
+void metallic(material m, inout hit h, inout ray r, inout xorshift32_state state)
+{
+  r.dir = r.dir + (-2*dot(r.dir, h.normal))*h.normal;
+  r.dir = normalize(r.dir) + (m.param1 * random_unit_vector(state));
+  r.albedo *= m.albedo;
+
+  r.bounce = dot(r.dir, h.normal) > 0;
+  if (!r.bounce) {
+    r.albedo = vec3(0.0f, 0.0f, 0.0f);
+  }
+  return;
+}
+
+void dialectric(material m, inout hit h, inout ray r, inout xorshift32_state state)
+{
+  r.dir = refract(r.dir, h.normal, m.param1);
+  r.bounce = true;
+  return;
+}
+
+
 vec3 raycast(vec3 ray_orig, vec3 ray_dir, inout xorshift32_state state)
 {
   ray r;
   r.count = 0u;
-  r.factor = 1.0f;
   r.origin = ray_orig;
   r.dir = ray_dir;
+  r.albedo = vec3(1.0f, 1.0f, 1.0f);
   r.bounce = true;
 
   while(true) 
@@ -206,7 +265,16 @@ vec3 raycast(vec3 ray_orig, vec3 ray_dir, inout xorshift32_state state)
     if (!r.bounce) break;
   }
 
-  return r.origin * r.factor;
+  return r.albedo;
+}
+
+
+vec3 shade_sky(vec3 dir, vec3 albedo) {
+
+  float a =  0.5f*(1.0f + normalize(dir).y);
+  albedo *= (1.0f-a)*vec3(1.0f, 1.0f, 1.0f) + a*vec3(0.5f, 0.7f, 1.0f);
+
+  return albedo;
 }
 
 uint xorshift32(inout xorshift32_state state) {
@@ -264,4 +332,9 @@ uint cantor(uint k1, uint k2) {
   uint x = (k1 + k2)*(k1 + k2 + 1u);
   x = x >> 1;
   return x + k2;
+}
+
+bool near_zero(vec3 v) {
+  float s = 1e-8;
+  return (abs(v.x) < s && abs(v.y) < s && abs(v.z) < s);
 }
