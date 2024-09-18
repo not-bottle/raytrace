@@ -1,5 +1,6 @@
 #include <iostream>
 #include <stdlib.h>
+#include <cmath>
 
 #include <glad/glad.h>
 #include <SDL2/SDL.h>
@@ -64,6 +65,8 @@ int SCREEN_HEIGHT = 1;
 
 int RENDER_WIDTH = 400;
 int RENDER_HEIGHT = 1;
+
+float VFOV = 90.0;
 
 int NUM_SAMPLES = 128;
 uint32_t BOUNCE_LIMIT = 50;
@@ -308,7 +311,9 @@ int main(int argc, char* args[])
     // Raytracing setup
 
     auto focal_length = 1.0;
-    auto viewport_height = 2.0; // (arbitrary)
+    auto theta = degrees_to_radians(VFOV);
+    auto h = std::tan(theta / 2);
+    auto viewport_height = 2*h*focal_length;
     auto viewport_width = (double(RENDER_WIDTH) / double(RENDER_HEIGHT)) * viewport_height;
 
     vec3 camera_origin = vec3(0.0f, 0.0f, 0.0f);
@@ -377,7 +382,7 @@ int main(int argc, char* args[])
     hittable_list objects = hittable_list();
 
     sphere ground = sphere(100.0, vec3(0.0, -100.5, -1.0), &mat_ground);
-    sphere centre = sphere(0.5, vec3(0.0, 0.0, -1.2), &mat_left);
+    sphere centre = sphere(0.5, vec3(0.0, 0.0, -1.2), &mat_centre);
     sphere centre_bubble = sphere(0.4, vec3(0.0, 0.0, -1.2), &mat_left_bubble);
     sphere left = sphere(0.5, vec3(-1.0, 0.0, -1.0), &mat_left);
     sphere left_bubble = sphere(0.4, vec3(-1.0, 0.0, -1.0), &mat_left_bubble);
@@ -386,7 +391,7 @@ int main(int argc, char* args[])
     //objects.add(uboBlock, sphere5);
     objects.add(sphereUBO, ground);
     objects.add(sphereUBO, centre);
-    objects.add(sphereUBO, centre_bubble);
+    //objects.add(sphereUBO, centre_bubble);
     objects.add(sphereUBO, left);
     objects.add(sphereUBO, left_bubble);
     objects.add(sphereUBO, right);
@@ -479,4 +484,4 @@ void createFrameBuffer(fb_help &fb)
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     return;
-};
+}
