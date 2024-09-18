@@ -66,8 +66,6 @@ int SCREEN_HEIGHT = 1;
 int RENDER_WIDTH = 400;
 int RENDER_HEIGHT = 1;
 
-float VFOV = 90.0;
-
 int NUM_SAMPLES = 128;
 uint32_t BOUNCE_LIMIT = 50;
 
@@ -310,19 +308,34 @@ int main(int argc, char* args[])
 
     // Raytracing setup
 
-    auto focal_length = 1.0;
-    auto theta = degrees_to_radians(VFOV);
+    point3 lookfrom = point3(-2, 2, 1);
+    point3 lookat = point3(0, 0, -1);
+    vec3 vup = vec3(0, 1, 0);
+    float vfov = 20.0;
+
+    vec3 u, v, w;
+
+    point3 camera_origin = lookfrom;
+
+    auto focal_length = (lookfrom - lookat).length();
+    auto theta = degrees_to_radians(vfov);
     auto h = std::tan(theta / 2);
     auto viewport_height = 2*h*focal_length;
     auto viewport_width = (double(RENDER_WIDTH) / double(RENDER_HEIGHT)) * viewport_height;
 
-    vec3 camera_origin = vec3(0.0f, 0.0f, 0.0f);
-    vec3 viewport_top_left = camera_origin - vec3(0, 0, focal_length)
-                                            - vec3(viewport_width/2, 0, 0)
-                                             - vec3(0, -viewport_height/2, 0);
+    w = unit_vector(lookfrom - lookat);
+    u = unit_vector(cross(vup, w));
+    v = cross(w, u);
 
-    vec3 delta_u = vec3(viewport_width / RENDER_WIDTH, 0.0f, 0.0f);
-    vec3 delta_v = vec3(0.0f, -viewport_height / RENDER_HEIGHT, 0.0f);
+    vec3 viewport_u = viewport_width * u;
+    vec3 viewport_v = viewport_height * -v;
+
+    vec3 delta_u = viewport_u / RENDER_WIDTH;
+    vec3 delta_v = viewport_v / RENDER_HEIGHT;
+
+    vec3 viewport_top_left = camera_origin - (focal_length*w)
+                                    - viewport_u/2
+                                    - viewport_v/2;
 
     std::cout << "RENDER_HEIGHT: " << RENDER_HEIGHT << std::endl;
     std::cout << "RENDER_WIDTH: " << RENDER_WIDTH << std::endl;
@@ -358,11 +371,17 @@ int main(int argc, char* args[])
     dialectric mat_left_bubble = dialectric(1.0/1.5);
     metallic mat_right = metallic(vec3(0.8, 0.6, 0.2), 0.0);
 
+    lambertian mat_left2 = lambertian(vec3(1.0, 0.0, 0.0));
+    lambertian mat_right2 = lambertian(vec3(0.0, 0.0, 1.0));
+
     materials.add(matUBO, mat_ground);
     materials.add(matUBO, mat_centre);
     materials.add(matUBO, mat_left);
     materials.add(matUBO, mat_right);
     materials.add(matUBO, mat_left_bubble);
+
+    materials.add(matUBO, mat_left2);
+    materials.add(matUBO, mat_right2);
 
     // SPHERES
 
@@ -388,13 +407,20 @@ int main(int argc, char* args[])
     sphere left_bubble = sphere(0.4, vec3(-1.0, 0.0, -1.0), &mat_left_bubble);
     sphere right = sphere(0.5, vec3(1.0, 0.0, -1.0), &mat_right);
 
-    //objects.add(uboBlock, sphere5);
+    auto R = std::cos(pi/4);
+
+    sphere left2 = sphere(R, vec3(-R, 0, -1), &mat_left2);
+    sphere right2 = sphere(R, vec3(R, 0, -1), &mat_right2);
+
     objects.add(sphereUBO, ground);
     objects.add(sphereUBO, centre);
-    //objects.add(sphereUBO, centre_bubble);
+    objects.add(sphereUBO, centre_bubble);
     objects.add(sphereUBO, left);
     objects.add(sphereUBO, left_bubble);
     objects.add(sphereUBO, right);
+
+    //objects.add(sphereUBO, left2);
+    //objects.add(sphereUBO, right2);
 
     // First pass render to FBO texture
 

@@ -36,7 +36,7 @@ class vec3 {
         float y() const {return e[1];}
         float z() const {return e[2];}
 
-        vec3 operator-() const {return vec3(-e[0], e[1], -e[2]);}
+        vec3 operator-() const {return vec3(-e[0], -e[1], -e[2]);}
         float operator[](int i) const {return e[i];} 
         float& operator[](int i) {return e[i];} // (remember, this is so I can do things like vec[0] = 2; (LH))
         // (See the += operator below. I can only do that because of this line.)
