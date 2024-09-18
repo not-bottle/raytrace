@@ -312,15 +312,16 @@ int main(int argc, char* args[])
     point3 lookat = point3(0, 0, -1);
     vec3 vup = vec3(0, 1, 0);
     float vfov = 20.0;
+    float defocus_angle = 10;
+    float focus_dist = 3.4;
 
     vec3 u, v, w;
 
     point3 camera_origin = lookfrom;
 
-    auto focal_length = (lookfrom - lookat).length();
     auto theta = degrees_to_radians(vfov);
     auto h = std::tan(theta / 2);
-    auto viewport_height = 2*h*focal_length;
+    auto viewport_height = 2*h*focus_dist;
     auto viewport_width = (double(RENDER_WIDTH) / double(RENDER_HEIGHT)) * viewport_height;
 
     w = unit_vector(lookfrom - lookat);
@@ -333,9 +334,13 @@ int main(int argc, char* args[])
     vec3 delta_u = viewport_u / RENDER_WIDTH;
     vec3 delta_v = viewport_v / RENDER_HEIGHT;
 
-    vec3 viewport_top_left = camera_origin - (focal_length*w)
+    vec3 viewport_top_left = camera_origin - (focus_dist*w)
                                     - viewport_u/2
                                     - viewport_v/2;
+
+    auto defocus_radius = focus_dist * std::tan(degrees_to_radians(defocus_angle / 2));
+    vec3 defocus_disk_u = u * defocus_radius;
+    vec3 defocus_disk_v = v * defocus_radius; 
 
     std::cout << "RENDER_HEIGHT: " << RENDER_HEIGHT << std::endl;
     std::cout << "RENDER_WIDTH: " << RENDER_WIDTH << std::endl;
@@ -447,6 +452,11 @@ int main(int argc, char* args[])
     ourShader.setVec3("delta_v", delta_v);
     ourShader.setVec3("camera_origin", camera_origin);
     ourShader.setVec3("viewport_top_left", viewport_top_left);
+
+    ourShader.setFloat("defocus_angle", defocus_angle);
+    ourShader.setVec3("defocus_disk_u", defocus_disk_u);
+    ourShader.setVec3("defocus_disk_v", defocus_disk_v);
+
     ourShader.setInt("num_spheres", objects.num);
 
     // Draw triangles

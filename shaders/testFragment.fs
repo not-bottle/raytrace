@@ -15,6 +15,10 @@ uniform vec3 delta_v;
 uniform vec3 camera_origin;
 uniform vec3 viewport_top_left;
 
+uniform vec3 defocus_disk_u;
+uniform vec3 defocus_disk_v;
+uniform float defocus_angle;
+
 uniform int num_spheres;
 
 uniform uint bounce_limit;
@@ -89,6 +93,7 @@ float rand_float(inout xorshift32_state state);
 vec3 rand_vec(inout xorshift32_state state);
 vec3 random_unit_vector(inout xorshift32_state state);
 vec3 random_on_hemisphere(inout xorshift32_state state, vec3 normal);
+vec3 random_unit_disk(inout xorshift32_state state);
 
 float bad_rand(vec2 co);
 
@@ -114,8 +119,17 @@ void main()
     rand_square = vec2(rand_float(state) - 0.5, rand_float(state) - 0.5);
     frag_loc = viewport_top_left + (gl_FragCoord.x + rand_square.x)*delta_u 
                                   + (gl_FragCoord.y + rand_square.y)*delta_v;
+
+    vec3 ray_origin;
+
+    if(defocus_angle <= 0) {
+      ray_origin = camera_origin;
+    } else {
+      vec3 rand_disk = random_unit_disk(state);
+      ray_origin = camera_origin + rand_disk.x * defocus_disk_u + rand_disk.y * defocus_disk_v;
+    }
     
-    colour += raycast(camera_origin, frag_loc - camera_origin, state);
+    colour += raycast(ray_origin, frag_loc - ray_origin, state);
   }
   
   colour = colour/num_samples;
@@ -346,6 +360,23 @@ vec3 random_unit_vector(inout xorshift32_state state) {
     if (1e-160 < lensq && lensq <= 1)
     {
       return p / sqrt(lensq);
+    }
+    i += 1u;
+  }
+}
+
+vec3 random_unit_disk(inout xorshift32_state state) {
+  vec3 p;
+  float lensq;
+  uint i = 0u;
+  while (true)
+  {
+    state.a += i;
+    p = vec3(rand_float(state), rand_float(state), 0);
+    lensq = dot(p, p);
+    if (lensq <= 1)
+    {
+      return p;
     }
     i += 1u;
   }
