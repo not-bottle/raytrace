@@ -65,7 +65,7 @@ int SCREEN_HEIGHT = 1;
 int RENDER_WIDTH = 400;
 int RENDER_HEIGHT = 1;
 
-int NUM_SAMPLES = 100;
+int NUM_SAMPLES = 128;
 uint32_t BOUNCE_LIMIT = 50;
 
 // Other constants
@@ -349,13 +349,15 @@ int main(int argc, char* args[])
 
     lambertian mat_ground = lambertian(vec3(0.8, 0.8, 0.0));
     lambertian mat_centre = lambertian(vec3(0.1, 0.2, 0.5));
-    dialectric mat_left = dialectric(1.00 / 1.33);
-    metallic mat_right = metallic(vec3(0.8, 0.6, 0.2), 1.0);
+    dialectric mat_left = dialectric(1.5);
+    dialectric mat_left_bubble = dialectric(1.0/1.5);
+    metallic mat_right = metallic(vec3(0.8, 0.6, 0.2), 0.0);
 
     materials.add(matUBO, mat_ground);
     materials.add(matUBO, mat_centre);
     materials.add(matUBO, mat_left);
     materials.add(matUBO, mat_right);
+    materials.add(matUBO, mat_left_bubble);
 
     // SPHERES
 
@@ -375,14 +377,18 @@ int main(int argc, char* args[])
     hittable_list objects = hittable_list();
 
     sphere ground = sphere(100.0, vec3(0.0, -100.5, -1.0), &mat_ground);
-    sphere centre = sphere(0.5, vec3(0.0, 0.0, -1.2), &mat_centre);;
-    sphere left = sphere(0.5, vec3(-1.0, 0.0, -1.0), &mat_left);;
-    sphere right = sphere(0.5, vec3(1.0, 0.0, -1.0), &mat_right);;
+    sphere centre = sphere(0.5, vec3(0.0, 0.0, -1.2), &mat_left);
+    sphere centre_bubble = sphere(0.4, vec3(0.0, 0.0, -1.2), &mat_left_bubble);
+    sphere left = sphere(0.5, vec3(-1.0, 0.0, -1.0), &mat_left);
+    sphere left_bubble = sphere(0.4, vec3(-1.0, 0.0, -1.0), &mat_left_bubble);
+    sphere right = sphere(0.5, vec3(1.0, 0.0, -1.0), &mat_right);
 
     //objects.add(uboBlock, sphere5);
     objects.add(sphereUBO, ground);
     objects.add(sphereUBO, centre);
+    objects.add(sphereUBO, centre_bubble);
     objects.add(sphereUBO, left);
+    objects.add(sphereUBO, left_bubble);
     objects.add(sphereUBO, right);
 
     // First pass render to FBO texture

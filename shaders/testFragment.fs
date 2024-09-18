@@ -77,6 +77,7 @@ ray bounce(ray r, inout xorshift32_state state);
 vec3 raycast(vec3 ray_orig, vec3 ray_dir, inout xorshift32_state state);
 
 vec3 shade_sky(vec3 dir, vec3 albedo);
+float shlick(float cosine, float rel_refract_index);
 
 void material_shade(inout hit h, inout ray r, inout xorshift32_state state);
 void lambertian(material m, inout hit h, inout ray r, inout xorshift32_state state);
@@ -89,6 +90,8 @@ vec3 rand_vec(inout xorshift32_state state);
 vec3 random_unit_vector(inout xorshift32_state state);
 vec3 random_on_hemisphere(inout xorshift32_state state, vec3 normal);
 
+float bad_rand(vec2 co);
+
 uint cantor(uint k1, uint k2);
 float lcg(uint x);
 
@@ -99,7 +102,7 @@ void main()
   seed ^= cantor(uint(gl_FragCoord.x), uint(gl_FragCoord.y));
 
   xorshift32_state state;
-  state.a = cantor(time_u32t, seed);
+  state.a = seed;
 
   vec3 frag_loc;
   vec2 rand_square;
@@ -133,9 +136,9 @@ float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig)
   float discriminant = h*h - a*c;
   if (discriminant >= 0) {
     float t = (h - sqrt(discriminant)) / a;
-    if (!(0.001 < t)) {
+    if (t < 0.001) {
       t = (h + sqrt(discriminant)) / a;
-      if (!(0.001 < t)) {
+      if (t < 0.001) {
         t = -1.0f;
       }
     }
@@ -160,17 +163,17 @@ hit hit_any(vec3 ray_orig, vec3 ray_dir)
   {
     new_t = hit_sphere(spheres[i].origin, spheres[i].radius, ray_dir, ray_orig);
     
-    if (t < 0 || (new_t < t && new_t > 0)) {
+    if (t < 0 || (new_t < t && new_t > 0.001)) {
       t = new_t;
       s = spheres[i];
     } 
   }
 
-  if (t > 0.0f)
+  if (t > 0.001f)
   {
     h.point = ray_orig + ray_dir*t;
     h.normal = (h.point - s.origin) / s.radius;
-    if (dot(h.normal, ray_dir) > 0) {
+    if (dot(h.normal, ray_dir) >= 0) {
       h.normal = -h.normal;
       h.interior = true;
     }
@@ -216,7 +219,7 @@ void material_shade(inout hit h, inout ray r, inout xorshift32_state state)
   } else if (m.type == 3) {
     dialectric(m, h, r, state);
   } else {
-    r.albedo = shade_sky(r.dir, r.albedo);
+    r.albedo = vec3(1.0, 0.0, 0.0);
     r.bounce = false;
   }
 
@@ -255,15 +258,16 @@ void dialectric(material m, inout hit h, inout ray r, inout xorshift32_state sta
   }
 
   vec3 unit_dir = normalize(r.dir);
+  vec3 unit_normal = normalize(h.normal);
 
   float cos_theta = min(dot(-unit_dir, h.normal), 1.0);
-  float sin_theta =  sqrt(1.0 - cos_theta*cos_theta);
+  float sin_theta =  sqrt(1.0 - cos_theta * cos_theta);
   bool cannot_refract = rel_refract_index * sin_theta > 1.0;
 
-  if (cannot_refract) {
-    r.dir = reflect(unit_dir, normalize(h.normal));
+  if (cannot_refract || shlick(cos_theta, rel_refract_index) > rand_float(state)) {
+    r.dir = reflect(unit_dir, unit_normal);
   } else { 
-    r.dir = refract(unit_dir, normalize(h.normal), rel_refract_index);
+    r.dir = refract(unit_dir, unit_normal, rel_refract_index);
   }
 
   r.bounce = true;
@@ -287,6 +291,13 @@ vec3 raycast(vec3 ray_orig, vec3 ray_dir, inout xorshift32_state state)
   }
 
   return r.albedo;
+}
+
+float shlick(float cosine, float rel_refract_index)
+{
+  float r0 = (1 - rel_refract_index) / (1 + rel_refract_index);
+  r0 = r0*r0;
+  return r0 + (1-r0)*pow((1 - cosine), 5);
 }
 
 
@@ -358,4 +369,8 @@ uint cantor(uint k1, uint k2) {
 bool near_zero(vec3 v) {
   float s = 1e-8;
   return (abs(v.x) < s && abs(v.y) < s && abs(v.z) < s);
+}
+
+float bad_rand(vec2 co){
+    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
 }

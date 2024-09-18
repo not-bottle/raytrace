@@ -21,10 +21,10 @@ class material {
     float param1;
     const int size = 32;
 
-    material() : id{0} {};
-    material(int my_type, vec3 my_albedo) : type{my_type}, albedo{my_albedo} {};
-    material(int my_type, float my_param) : type{my_type}, param1{my_param} {};
-    material(int my_type, vec3 my_albedo, float my_param) : type{my_type}, albedo{my_albedo}, param1{my_param} {};
+    material() : id{0} {std::cout << "ho!" << std::endl;};
+    material(int my_type, vec3 my_albedo) : type{my_type}, albedo{my_albedo} {std::cout << "hello!" << std::endl;};
+    material(int my_type, float my_param) : type{my_type}, param1{my_param} {std::cout << "hey!" << std::endl;};
+    material(int my_type, vec3 my_albedo, float my_param) : type{my_type}, albedo{my_albedo}, param1{my_param} {std::cout << "hiya!" << std::endl;};
 
     void add(unsigned int glBuffer, int offset) {
         glBindBuffer(GL_UNIFORM_BUFFER, glBuffer);
