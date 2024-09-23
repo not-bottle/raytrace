@@ -95,14 +95,19 @@ vec3 random_unit_vector(inout xorshift32_state state);
 vec3 random_on_hemisphere(inout xorshift32_state state, vec3 normal);
 vec3 random_unit_disk(inout xorshift32_state state);
 
+float bad_rand(vec2 co);
+
+uint cantor(uint k1, uint k2);
+float lcg(uint x);
+
 void main()
 {
   vec4 tex = texture(screenTexture, TexCoords);
-  xorshift32_state state;
-  state.a = uintBitsToFloat(tex.x);
+  uint seed = floatBitsToUint(tex.x + tex.y + tex.z);
+  seed ^= cantor(uint(gl_FragCoord.x), uint(gl_FragCoord.y));
 
-  FragColour = vec4(rand_vec(state), 0.0f);
-  return;
+  xorshift32_state state;
+  state.a = seed;
 
   vec3 frag_loc;
   vec2 rand_square;
@@ -380,7 +385,17 @@ vec3 random_on_hemisphere(inout xorshift32_state state, vec3 normal) {
   }
 }
 
+uint cantor(uint k1, uint k2) {
+  uint x = (k1 + k2)*(k1 + k2 + 1u);
+  x = x >> 1;
+  return x + k2;
+}
+
 bool near_zero(vec3 v) {
   float s = 1e-8;
   return (abs(v.x) < s && abs(v.y) < s && abs(v.z) < s);
+}
+
+float bad_rand(vec2 co){
+    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
 }

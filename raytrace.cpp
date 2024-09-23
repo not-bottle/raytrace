@@ -281,10 +281,11 @@ int main(int argc, char* args[])
 
     // SHADER CREATION:
     Shader ourShader("shaders/testVertex.vs", "shaders/testFragment.fs");
-    Shader perlinShader("shaders/testVertex.vs", "shaders/perlin.fs");
+    Shader noiseShader("shaders/testVertex.vs", "shaders/prng.fs");
     Shader texShader("shaders/texVertex.vs", "shaders/texFragment.fs");
 
 
+    /*
     // CREATE PERLIN NOISE TEXTURE
     glBindFramebuffer(GL_FRAMEBUFFER, perlinfb.fbo);
     glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
@@ -297,23 +298,36 @@ int main(int argc, char* args[])
     int PERLIN_LAYERS = 12;
     float PERLIN_LACURNITY = 2;
 
-    perlinShader.use();
+    noiseShader.use();
 
-    perlinShader.setFloat("GRID_SIZE", PERLIN_GRID_SIZE);
-    perlinShader.setFloat("CONTRAST", PERLIN_CONTRAST);
-    perlinShader.setInt("LAYERS", PERLIN_LAYERS);
-    perlinShader.setFloat("LACURNITY", PERLIN_CONTRAST);
+    noiseShader.setFloat("GRID_SIZE", PERLIN_GRID_SIZE);
+    noiseShader.setFloat("CONTRAST", PERLIN_CONTRAST);
+    noiseShader.setInt("LAYERS", PERLIN_LAYERS);
+    noiseShader.setFloat("LACURNITY", PERLIN_CONTRAST);
+
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    */
+
+    glBindFramebuffer(GL_FRAMEBUFFER, perlinfb.fbo);
+    glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
+
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    noiseShader.use();
+
+    noiseShader.setUint("timevalue", 3568u);
 
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     // Raytracing setup
 
-    point3 lookfrom = point3(-2, 2, 1);
+    point3 lookfrom = point3(0, 0, 0);
     point3 lookat = point3(0, 0, -1);
     vec3 vup = vec3(0, 1, 0);
-    float vfov = 20.0;
-    float defocus_angle = 10;
-    float focus_dist = 3.4;
+    float vfov = 90.0;
+    float defocus_angle = 0.3;
+    float focus_dist = 1;
 
     vec3 u, v, w;
 
@@ -408,9 +422,9 @@ int main(int argc, char* args[])
     sphere ground = sphere(100.0, vec3(0.0, -100.5, -1.0), &mat_ground);
     sphere centre = sphere(0.5, vec3(0.0, 0.0, -1.2), &mat_centre);
     sphere centre_bubble = sphere(0.4, vec3(0.0, 0.0, -1.2), &mat_left_bubble);
-    sphere left = sphere(0.5, vec3(-1.0, 0.0, -1.0), &mat_left);
+    sphere left = sphere(0.5, vec3(-1.0, 0.0, -1.0), &mat_centre);
     sphere left_bubble = sphere(0.4, vec3(-1.0, 0.0, -1.0), &mat_left_bubble);
-    sphere right = sphere(0.5, vec3(1.0, 0.0, -1.0), &mat_right);
+    sphere right = sphere(0.5, vec3(1.0, 0.0, -1.0), &mat_centre);
 
     auto R = std::cos(pi/4);
 
@@ -419,9 +433,9 @@ int main(int argc, char* args[])
 
     objects.add(sphereUBO, ground);
     objects.add(sphereUBO, centre);
-    objects.add(sphereUBO, centre_bubble);
+    //objects.add(sphereUBO, centre_bubble);
     objects.add(sphereUBO, left);
-    objects.add(sphereUBO, left_bubble);
+    //objects.add(sphereUBO, left_bubble);
     objects.add(sphereUBO, right);
 
     //objects.add(sphereUBO, left2);
