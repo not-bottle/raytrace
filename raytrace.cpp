@@ -19,6 +19,25 @@ struct fb_help {
     unsigned int tex;
 };
 
+
+struct Camera {
+    point3 lookfrom;
+    point3 lookat;
+    vec3 vup;
+    float vfov;
+    float defocus_angle;
+    float focus_dist;
+
+    vec3 delta_u;
+    vec3 delta_v;
+
+    vec3 viewport_top_left;
+
+    float defocus_radius;
+    vec3 defocus_disc_u;
+    vec3 defocus_disc_v;
+};
+
 // Start up SDL and create a window
 bool init();
 
@@ -32,6 +51,8 @@ void event_handling();
 void close();
 
 void createFrameBuffer(fb_help &fb);
+
+void shader_chunk_pass(vec2 c_min, vec2 c_max, Shader shader, Camera cam, fb_help fb, fb_help tex, hittable_list objects);
 
 // SDL Objects
 SDL_Window* gWindow = NULL; // Main window
@@ -63,10 +84,10 @@ auto aspect_ratio = 16.0 / 9.0;
 int SCREEN_WIDTH = 1200;
 int SCREEN_HEIGHT = 1;
 
-int RENDER_WIDTH = 1200;
+int RENDER_WIDTH = 320;
 int RENDER_HEIGHT = 1;
 
-int NUM_SAMPLES = 10;
+int NUM_SAMPLES = 8;
 uint32_t BOUNCE_LIMIT = 50;
 
 // Other constants
@@ -308,48 +329,50 @@ int main(int argc, char* args[])
 
     // Raytracing setup
 
-    point3 lookfrom = point3(13, 2, 3);
-    point3 lookat = point3(0, 0, 0);
-    vec3 vup = vec3(0, 1, 0);
-    float vfov = 20.0;
-    float defocus_angle = 0.6;
-    float focus_dist = 10.0;
+    Camera cam;
+
+    cam.lookfrom = point3(0, 10, 0);
+    cam.lookat = point3(0, -1, 0);
+    cam.vup = vec3(0, 0, 1);
+    cam.vfov = 90.0;
+    cam.defocus_angle = 0.6;
+    cam.focus_dist = 1.0;
 
     vec3 u, v, w;
 
-    point3 camera_origin = lookfrom;
+    point3 camera_origin = cam.lookfrom;
 
-    auto theta = degrees_to_radians(vfov);
+    auto theta = degrees_to_radians(cam.vfov);
     auto h = std::tan(theta / 2);
-    auto viewport_height = 2*h*focus_dist;
+    auto viewport_height = 2*h*cam.focus_dist;
     auto viewport_width = (double(RENDER_WIDTH) / double(RENDER_HEIGHT)) * viewport_height;
 
-    w = unit_vector(lookfrom - lookat);
-    u = unit_vector(cross(vup, w));
+    w = unit_vector(cam.lookfrom - cam.lookat);
+    u = unit_vector(cross(cam.vup, w));
     v = cross(w, u);
 
     vec3 viewport_u = viewport_width * u;
     vec3 viewport_v = viewport_height * -v;
 
-    vec3 delta_u = viewport_u / RENDER_WIDTH;
-    vec3 delta_v = viewport_v / RENDER_HEIGHT;
+    cam.delta_u = viewport_u / RENDER_WIDTH;
+    cam.delta_v = viewport_v / RENDER_HEIGHT;
 
-    vec3 viewport_top_left = camera_origin - (focus_dist*w)
+    cam.viewport_top_left = camera_origin - (cam.focus_dist*w)
                                     - viewport_u/2
                                     - viewport_v/2;
 
-    auto defocus_radius = focus_dist * std::tan(degrees_to_radians(defocus_angle / 2));
-    vec3 defocus_disk_u = u * defocus_radius;
-    vec3 defocus_disk_v = v * defocus_radius; 
+    cam.defocus_radius = cam.focus_dist * std::tan(degrees_to_radians(cam.defocus_angle / 2));
+    cam.defocus_disc_u = u * cam.defocus_radius;
+    cam.defocus_disc_v = v * cam.defocus_radius; 
 
     std::cout << "RENDER_HEIGHT: " << RENDER_HEIGHT << std::endl;
     std::cout << "RENDER_WIDTH: " << RENDER_WIDTH << std::endl;
 
     std::cout << "viewport_height: " << viewport_height << std::endl;
     std::cout << "viewport_width: " << viewport_width << std::endl;
-    std::cout << "viewport_top_left: " << viewport_top_left << std::endl;
-    std::cout << "delta_u: " << delta_u << std::endl;
-    std::cout << "delta_v: " << delta_v << std::endl;
+    std::cout << "viewport_top_left: " << cam.viewport_top_left << std::endl;
+    std::cout << "delta_u: " << cam.delta_u << std::endl;
+    std::cout << "delta_v: " << cam.delta_v << std::endl;
 
     // Set up UBO data
 
@@ -370,7 +393,6 @@ int main(int argc, char* args[])
     // Add Materials
     material_list materials = material_list();
 
-    /* 
     lambertian mat_ground = lambertian(vec3(0.8, 0.8, 0.0));
     lambertian mat_centre = lambertian(vec3(0.1, 0.2, 0.5));
     dialectric mat_left = dialectric(1.5);
@@ -388,7 +410,6 @@ int main(int argc, char* args[])
 
     materials.add(matUBO, mat_left2);
     materials.add(matUBO, mat_right2);
-    */
 
     // SPHERES
 
@@ -407,7 +428,6 @@ int main(int argc, char* args[])
     // Add spheres
     hittable_list objects = hittable_list();
 
-    /*
     sphere ground = sphere(100.0, vec3(0.0, -100.5, -1.0), &mat_ground);
     sphere centre = sphere(0.5, vec3(0.0, 0.0, -1.2), &mat_centre);
     sphere centre_bubble = sphere(0.4, vec3(0.0, 0.0, -1.2), &mat_left_bubble);
@@ -429,7 +449,8 @@ int main(int argc, char* args[])
 
     //objects.add(sphereUBO, left2);
     //objects.add(sphereUBO, right2);
-    */
+
+   /*
 
     lambertian ground_material = lambertian(colour(0.5, 0.5, 0.5));
     sphere ground = sphere(1000, point3(0, -1000, 0), &ground_material);
@@ -482,8 +503,8 @@ int main(int argc, char* args[])
         }
     }
 
-    // First pass render to FBO texture
-    std::cerr << "Starting render!" << std::endl;
+    */
+
 
     // bind frame buffer for offscreen rendering
     glBindFramebuffer(GL_FRAMEBUFFER, upscalefb.fbo);
@@ -500,23 +521,19 @@ int main(int argc, char* args[])
     // Shader uniforms
     uint32_t timeValue = SDL_GetTicks();
     ourShader.setUint("time_u32t", timeValue);
-
     ourShader.setInt("num_samples", NUM_SAMPLES);
     ourShader.setUint("bounce_limit", BOUNCE_LIMIT);
-
-    ourShader.setVec3("delta_u", delta_u);
-    ourShader.setVec3("delta_v", delta_v);
-    ourShader.setVec3("camera_origin", camera_origin);
-    ourShader.setVec3("viewport_top_left", viewport_top_left);
-
-    ourShader.setFloat("defocus_angle", defocus_angle);
-    ourShader.setVec3("defocus_disk_u", defocus_disk_u);
-    ourShader.setVec3("defocus_disk_v", defocus_disk_v);
-
+    ourShader.setVec3("delta_u", cam.delta_u);
+    ourShader.setVec3("delta_v", cam.delta_v);
+    ourShader.setVec3("camera_origin", cam.lookat);
+    ourShader.setVec3("viewport_top_left", cam.viewport_top_left);
+    ourShader.setFloat("defocus_angle", cam.defocus_angle);
+    ourShader.setVec3("defocus_disk_u", cam.defocus_disc_u);
+    ourShader.setVec3("defocus_disk_v", cam.defocus_disc_v);
     ourShader.setInt("num_spheres", objects.num);
 
     // Draw triangles
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); 
 
     while (!gQuit)
     {
@@ -574,6 +591,40 @@ void createFrameBuffer(fb_help &fb)
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    return;
+}
+
+void shader_chunk_pass(vec2 c_min, vec2 c_max, Shader shader, Camera cam, fb_help fb, fb_help tex, hittable_list objects) {
+
+    // bind frame buffer for offscreen rendering
+    glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
+    glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
+    glBindTexture(GL_TEXTURE_2D, tex.tex);
+
+    // Activate shader
+    shader.use();
+
+    // Shader uniforms
+    uint32_t timeValue = SDL_GetTicks();
+    shader.setUint("time_u32t", timeValue);
+
+    shader.setInt("num_samples", NUM_SAMPLES);
+    shader.setUint("bounce_limit", BOUNCE_LIMIT);
+
+    shader.setVec3("delta_u", cam.delta_u);
+    shader.setVec3("delta_v", cam.delta_v);
+    shader.setVec3("camera_origin", cam.lookat);
+    shader.setVec3("viewport_top_left", cam.viewport_top_left);
+
+    shader.setFloat("defocus_angle", cam.defocus_angle);
+    shader.setVec3("defocus_disk_u", cam.defocus_disc_u);
+    shader.setVec3("defocus_disk_v", cam.defocus_disc_v);
+
+    shader.setInt("num_spheres", objects.num);
+
+    // Draw triangles
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); 
 
     return;
 }

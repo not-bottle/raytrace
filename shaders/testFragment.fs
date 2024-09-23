@@ -137,7 +137,7 @@ void main()
 
   float gamma = 2.2;
 
-  FragColour.rgb = pow(FragColour.rgb, vec3(1.0/gamma));
+  FragColour.rgb = pow(FragColour.rgb, vec3(1.0/gamma));  
 }
 
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig)

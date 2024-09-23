@@ -25,6 +25,11 @@ inline float random_float(float min, float max) {
     return min + (max-min)*random_float();
 }
 
+struct vec2 {
+    float x;
+    float y;
+};
+
 class vec3 {
     public:
         float e[3];
