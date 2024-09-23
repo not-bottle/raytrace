@@ -97,38 +97,44 @@ vec3 random_unit_disk(inout xorshift32_state state);
 
 void main()
 {
-  vec4 tex = texture(screenTexture, TexCoords);
-  xorshift32_state state;
-  state.a = floatBitsToUint(tex.x);
+  if (gl_FragCoord.x < 10000) {
+    vec4 tex = texture(screenTexture, TexCoords);
+    xorshift32_state state;
+    state.a = floatBitsToUint(tex.x);
 
-  vec3 frag_loc;
-  vec2 rand_square;
+    vec3 frag_loc;
+    vec2 rand_square;
 
-  vec3 colour = vec3(0.0f, 0.0f, 0.0f);
-  vec3 ray_origin;
+    vec3 colour = vec3(0.0f, 0.0f, 0.0f);
+    vec3 ray_origin;
 
-  for (int i=0;i<num_samples;i++)
-  {
-    rand_square = vec2(rand_float(state) - 0.5, rand_float(state) - 0.5);
-    frag_loc = viewport_top_left + (gl_FragCoord.x + rand_square.x)*delta_u 
-                                  + (gl_FragCoord.y + rand_square.y)*delta_v;
+    for (int i=0;i<num_samples;i++)
+    {
+      rand_square = vec2(rand_float(state) - 0.5, rand_float(state) - 0.5);
+      frag_loc = viewport_top_left + (gl_FragCoord.x + rand_square.x)*delta_u 
+                                    + (gl_FragCoord.y + rand_square.y)*delta_v;
 
-    if(defocus_angle <= 0) {
-      ray_origin = camera_origin;
-    } else {
-      vec3 rand_disk = random_unit_disk(state);
-      ray_origin = camera_origin + rand_disk.x * defocus_disk_u + rand_disk.y * defocus_disk_v;
+      if(defocus_angle <= 0) {
+        ray_origin = camera_origin;
+      } else {
+        vec3 rand_disk = random_unit_disk(state);
+        ray_origin = camera_origin + rand_disk.x * defocus_disk_u + rand_disk.y * defocus_disk_v;
+      }
+      
+      colour += raycast(ray_origin, frag_loc - ray_origin, state);
     }
     
-    colour += raycast(ray_origin, frag_loc - ray_origin, state);
+    colour = colour/num_samples;
+    FragColour = vec4(colour, 0.0f);
+
+    float gamma = 2.2;
+
+    FragColour.rgb = pow(FragColour.rgb, vec3(1.0/gamma));
+  } else {
+    FragColour = vec4(1.0f, 0, 0, 0);
   }
+
   
-  colour = colour/num_samples;
-  FragColour = vec4(colour, 0.0f);
-
-  float gamma = 2.2;
-
-  FragColour.rgb = pow(FragColour.rgb, vec3(1.0/gamma));
 }
 
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig)
