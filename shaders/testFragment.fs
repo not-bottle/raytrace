@@ -199,23 +199,18 @@ hit hit_any(vec3 ray_orig, vec3 ray_dir)
 
 ray bounce(ray r, inout xorshift32_state state)
 {
-  if (r.count >= bounce_limit) {
-    r.albedo = vec3(0.0f, 0.0f, 0.0f);
-    r.bounce = false;
+  hit h = hit_any(r.origin, r.dir);
+
+  if (h.hit)
+  {
+    r.origin = h.point;
+    r.count = r.count + 1u;
+
+    material_shade(h, r, state);
+
   } else {
-    hit h = hit_any(r.origin, r.dir);
-
-    if (h.hit)
-    {
-      r.origin = h.point;
-      r.count = r.count + 1u;
-
-      material_shade(h, r, state);
-
-    } else {
-      r.albedo *= shade_sky(r.dir, r.albedo);
-      r.bounce = false;
-    }
+    r.albedo *= shade_sky(r.dir, r.albedo);
+    r.bounce = false;
   }
 
   return r;
@@ -297,13 +292,13 @@ vec3 raycast(vec3 ray_orig, vec3 ray_dir, inout xorshift32_state state)
   r.albedo = vec3(1.0f, 1.0f, 1.0f);
   r.bounce = true;
 
-  while(true) 
+  for (uint i=0u; i<bounce_limit; i++)
   {
     r = bounce(r, state);
-    if (!r.bounce) break;
+    if (!r.bounce) return r.albedo;
   }
 
-  return r.albedo;
+  return vec3(0.0f, 0.0f, 0.0f);
 }
 
 float shlick(float cosine, float rel_refract_index)
