@@ -113,14 +113,13 @@ void main()
   vec2 rand_square;
 
   vec3 colour = vec3(0.0f, 0.0f, 0.0f);
+  vec3 ray_origin;
 
   for (int i=0;i<num_samples;i++)
   {
     rand_square = vec2(rand_float(state) - 0.5, rand_float(state) - 0.5);
     frag_loc = viewport_top_left + (gl_FragCoord.x + rand_square.x)*delta_u 
                                   + (gl_FragCoord.y + rand_square.y)*delta_v;
-
-    vec3 ray_origin;
 
     if(defocus_angle <= 0) {
       ray_origin = camera_origin;

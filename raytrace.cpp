@@ -63,10 +63,10 @@ auto aspect_ratio = 16.0 / 9.0;
 int SCREEN_WIDTH = 1600;
 int SCREEN_HEIGHT = 1;
 
-int RENDER_WIDTH = 400;
+int RENDER_WIDTH = 1600;
 int RENDER_HEIGHT = 1;
 
-int NUM_SAMPLES = 128;
+int NUM_SAMPLES = 512;
 uint32_t BOUNCE_LIMIT = 50;
 
 // Other constants
