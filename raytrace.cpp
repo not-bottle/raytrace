@@ -5,6 +5,8 @@
 #include <glad/glad.h>
 #include <SDL2/SDL.h>
 
+#include "randgen.h"
+
 #include "shader.h"
 #include "vec3.h"
 #include "sphere.h"
@@ -70,8 +72,10 @@ int NUM_SAMPLES = 512;
 uint32_t BOUNCE_LIMIT = 50;
 
 // Other constants
-int MAX_NUM_OBJECTS = 128;
-int SPHERE_UBO_SIZE = MAX_NUM_OBJECTS*32;
+const int MAX_NUM_OBJECTS = 128;
+const int SPHERE_UBO_SIZE = MAX_NUM_OBJECTS*32;
+
+int RANDOM_ARRAY_SIZE = 2011;
 
 void check_attributes()
 {
@@ -320,6 +324,11 @@ int main(int argc, char* args[])
 
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
+    // RANDOM GENERATION
+    randgen r {};
+    vec3 rand_unit_vectors[RANDOM_ARRAY_SIZE];
+    r.gen_unit_vectors(rand_unit_vectors, RANDOM_ARRAY_SIZE);
+
     // Raytracing setup
 
     point3 lookfrom = point3(0, 0, 0);
@@ -440,6 +449,19 @@ int main(int argc, char* args[])
 
     //objects.add(sphereUBO, left2);
     //objects.add(sphereUBO, right2);
+
+    unsigned int randUBO;
+    int randsize = RANDOM_ARRAY_SIZE * sizeof(float) * 3;
+    glGenBuffers(1, &randUBO);
+    glBindBuffer(GL_UNIFORM_BUFFER, randUBO);
+    glBufferData(GL_UNIFORM_BUFFER, randsize, NULL, GL_STATIC_DRAW);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    unsigned int uniformBlockIndexRand = glGetUniformBlockIndex(ourShader.ID, "Precomp");
+    glUniformBlockBinding(ourShader.ID, uniformBlockIndexRand, 3);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 3, randUBO, 0, randsize);
+    glBindBuffer(GL_UNIFORM_BUFFER, randUBO);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(rand_unit_vectors), &rand_unit_vectors);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     // First pass render to FBO texture
 

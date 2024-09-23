@@ -62,6 +62,11 @@ struct sphere
   vec3 origin;
 };
 
+layout (std140) uniform Precomp
+{
+  vec3[2011] unit_vectors;
+};
+
 layout (std140) uniform Materials
 {
   material[64] materials;
@@ -87,6 +92,7 @@ void material_shade(inout hit h, inout ray r, inout xorshift32_state state);
 void lambertian(material m, inout hit h, inout ray r, inout xorshift32_state state);
 void metallic(material m, inout hit h, inout ray r, inout xorshift32_state state);
 void dialectric(material m, inout hit h, inout ray r, inout xorshift32_state state);
+int idxcycle(inout int idx, int rand_offset);
 
 uint xorshift32(inout xorshift32_state state);
 float rand_float(inout xorshift32_state state);
@@ -101,6 +107,12 @@ void main()
     vec4 tex = texture(screenTexture, TexCoords);
     xorshift32_state state;
     state.a = floatBitsToUint(tex.x);
+
+    int rand_idx = int(mod(floatBitsToInt(tex.x), 2011));
+    int rand_offset = rand_idx;
+
+    FragColour = vec4((unit_vectors[idxcycle(rand_idx, rand_offset)]/2) + 0.5, 0.0f);
+    return;
 
     vec3 frag_loc;
     vec2 rand_square;
@@ -386,4 +398,8 @@ vec3 random_on_hemisphere(inout xorshift32_state state, vec3 normal) {
 bool near_zero(vec3 v) {
   float s = 1e-8;
   return (abs(v.x) < s && abs(v.y) < s && abs(v.z) < s);
+}
+
+int idxcycle(inout int idx, int rand_offset) {
+  return idx = int(mod(idx + rand_offset, 2011));
 }
