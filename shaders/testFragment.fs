@@ -101,9 +101,6 @@ void main()
   xorshift32_state state;
   state.a = floatBitsToUint(tex.x);
 
-  FragColour = vec4(rand_vec(state), 0.0f);
-  return;
-
   vec3 frag_loc;
   vec2 rand_square;
 
@@ -293,7 +290,7 @@ vec3 raycast(vec3 ray_orig, vec3 ray_dir, inout xorshift32_state state)
     if (!r.bounce) return r.albedo;
   }
 
-  return vec3(0.0f, 0.0f, 0.0f);
+  return r.albedo;
 }
 
 float shlick(float cosine, float rel_refract_index)

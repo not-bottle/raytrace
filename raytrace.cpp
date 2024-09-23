@@ -422,7 +422,7 @@ int main(int argc, char* args[])
     sphere ground = sphere(100.0, vec3(0.0, -100.5, -1.0), &mat_ground);
     sphere centre = sphere(0.5, vec3(0.0, 0.0, -1.2), &mat_centre);
     sphere centre_bubble = sphere(0.4, vec3(0.0, 0.0, -1.2), &mat_left_bubble);
-    sphere left = sphere(0.5, vec3(-1.0, 0.0, -1.0), &mat_centre);
+    sphere left = sphere(0.5, vec3(-1.0, 0.0, -1.0), &mat_left);
     sphere left_bubble = sphere(0.4, vec3(-1.0, 0.0, -1.0), &mat_left_bubble);
     sphere right = sphere(0.5, vec3(1.0, 0.0, -1.0), &mat_centre);
 
@@ -435,7 +435,7 @@ int main(int argc, char* args[])
     objects.add(sphereUBO, centre);
     //objects.add(sphereUBO, centre_bubble);
     objects.add(sphereUBO, left);
-    //objects.add(sphereUBO, left_bubble);
+    objects.add(sphereUBO, left_bubble);
     objects.add(sphereUBO, right);
 
     //objects.add(sphereUBO, left2);
