@@ -99,7 +99,7 @@ void main()
 {
   vec4 tex = texture(screenTexture, TexCoords);
   xorshift32_state state;
-  state.a = uintBitsToFloat(tex.x);
+  state.a = floatBitsToUint(tex.x);
 
   FragColour = vec4(rand_vec(state), 0.0f);
   return;
