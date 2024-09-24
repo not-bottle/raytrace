@@ -73,14 +73,14 @@ struct sphere
 
 layout (std140) uniform Precomp_1
 {
-  vec3[2048] unit_vectors;
-  vec3[2048] unit_disks;
+  vec3[8192] unit_vectors;
+  vec3[8192] unit_disks;
 };
 
 layout (std140) uniform Precomp_2
 {
-  vec3[2048] rand_squares;
-  vec3[2048] random_vectors;
+  vec3[8192] rand_squares;
+  vec3[8192] random_vectors;
 };
 
 layout (std140) uniform Materials
@@ -131,64 +131,46 @@ vec3 random_unit_disk(inout xorshift32_state state);
 
 void main()
 {
-  if (gl_FragCoord.x < 10000) {
-    vec4 tex = texture(screenTexture, TexCoords);
+  vec4 tex = texture(screenTexture, TexCoords);
 
-    rand_state state;
-    cyclestate cs;
+  rand_state state;
+  cyclestate cs;
 
-    cs.idx = int(mod(floatBitsToInt(tex.x), 2011));
-    cs.offset = cs.idx;
+  cs.idx = int(mod(floatBitsToInt(tex.x), 2011));
+  cs.offset = 7;
 
-    state.s = cs;
+  state.s = cs;
 
-    vec3 col;
+  vec3 col;
 
-    if (gl_FragCoord.x < 400) {
-      col = random_unit_vector(state);
-    } else if (gl_FragCoord.x < 800) {
-      col = random_unit_disk(state);
-    } else if (gl_FragCoord.x < 1200) {
-      col = random_square(state);
+  vec3 frag_loc;
+  vec2 rand_square;
+
+  vec3 colour = vec3(0.0f, 0.0f, 0.0f);
+  vec3 ray_origin;
+
+  for (int i=0;i<num_samples;i++)
+  {
+    rand_square = random_square(state).xy;
+    frag_loc = viewport_top_left + (gl_FragCoord.x + rand_square.x)*delta_u 
+                                  + (gl_FragCoord.y + rand_square.y)*delta_v;
+
+    if(defocus_angle <= 0) {
+      ray_origin = camera_origin;
     } else {
-      col = vec3(random_float(state));
-    }
-    FragColour = vec4(col, 0.0f);
-    return;
-
-    vec3 frag_loc;
-    vec2 rand_square;
-
-    vec3 colour = vec3(0.0f, 0.0f, 0.0f);
-    vec3 ray_origin;
-
-    for (int i=0;i<num_samples;i++)
-    {
-      rand_square = random_square(state).xy;
-      frag_loc = viewport_top_left + (gl_FragCoord.x + rand_square.x)*delta_u 
-                                    + (gl_FragCoord.y + rand_square.y)*delta_v;
-
-      if(defocus_angle <= 0) {
-        ray_origin = camera_origin;
-      } else {
-        vec3 rand_disk = random_unit_disk(state);
-        ray_origin = camera_origin + rand_disk.x * defocus_disk_u + rand_disk.y * defocus_disk_v;
-      }
-      
-      colour += raycast(ray_origin, frag_loc - ray_origin, state);
+      vec3 rand_disk = random_unit_disk(state);
+      ray_origin = camera_origin + rand_disk.x * defocus_disk_u + rand_disk.y * defocus_disk_v;
     }
     
-    colour = colour/num_samples;
-    FragColour = vec4(colour, 0.0f);
-
-    float gamma = 2.2;
-
-    FragColour.rgb = pow(FragColour.rgb, vec3(1.0/gamma));
-  } else {
-    FragColour = vec4(1.0f, 0, 0, 0);
+    colour += raycast(ray_origin, frag_loc - ray_origin, state);
   }
-
   
+  colour = colour/num_samples;
+  FragColour = vec4(colour, 0.0f);
+
+  float gamma = 2.2;
+
+  FragColour.rgb = pow(FragColour.rgb, vec3(1.0/gamma));
 }
 
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig)
@@ -305,7 +287,7 @@ void metallic(material m, inout hit h, inout ray r, inout rand_state state)
 
   r.bounce = dot(r.dir, h.normal) > 0;
   if (!r.bounce) {
-    r.albedo = vec3(0.0f, 0.0f, 0.0f);
+    r.albedo = vec3(1.0f, 0.0f, 0.0f);
   }
   return;
 }
@@ -381,7 +363,7 @@ vec3 random_square(inout rand_state s) { return random_square(s.s); }
 float random_float(inout rand_state s) { return random_float(s.s); }
 
 int idxcycle(inout cyclestate cs) {
-  return cs.idx = int(mod(cs.idx + cs.offset, 2011));
+  return cs.idx = int(mod(cs.idx + cs.offset, 7919));
 }
 
 vec3 random_unit_vector(inout cyclestate cs) {

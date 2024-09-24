@@ -75,7 +75,7 @@ uint32_t BOUNCE_LIMIT = 50;
 const int MAX_NUM_OBJECTS = 128;
 const int SPHERE_UBO_SIZE = MAX_NUM_OBJECTS*32;
 
-int RANDOM_ARRAY_SIZE = 2011;
+int RANDOM_ARRAY_SIZE = 8192;
 
 void check_attributes()
 {
@@ -330,7 +330,7 @@ int main(int argc, char* args[])
     point3 lookat = point3(0, 0, -1);
     vec3 vup = vec3(0, 1, 0);
     float vfov = 90.0;
-    float defocus_angle = 0.3;
+    float defocus_angle = 12;
     float focus_dist = 1;
 
     vec3 u, v, w;
@@ -425,10 +425,9 @@ int main(int argc, char* args[])
 
     sphere ground = sphere(100.0, vec3(0.0, -100.5, -1.0), &mat_ground);
     sphere centre = sphere(0.5, vec3(0.0, 0.0, -1.2), &mat_centre);
-    sphere centre_bubble = sphere(0.4, vec3(0.0, 0.0, -1.2), &mat_left_bubble);
     sphere left = sphere(0.5, vec3(-1.0, 0.0, -1.0), &mat_left);
     sphere left_bubble = sphere(0.4, vec3(-1.0, 0.0, -1.0), &mat_left_bubble);
-    sphere right = sphere(0.5, vec3(1.0, 0.0, -1.0), &mat_centre);
+    sphere right = sphere(0.5, vec3(1.0, 0.0, -1.0), &mat_right);
 
     auto R = std::cos(pi/4);
 
@@ -437,9 +436,8 @@ int main(int argc, char* args[])
 
     objects.add(sphereUBO, ground);
     objects.add(sphereUBO, centre);
-    //objects.add(sphereUBO, centre_bubble);
     objects.add(sphereUBO, left);
-    objects.add(sphereUBO, left_bubble);
+    //objects.add(sphereUBO, left_bubble);
     objects.add(sphereUBO, right);
 
     //objects.add(sphereUBO, left2);
@@ -457,38 +455,34 @@ int main(int argc, char* args[])
     r.gen_rand_squares(rand_squares, RANDOM_ARRAY_SIZE);
     r.gen_rand_vectors(rand_vectors, RANDOM_ARRAY_SIZE);
 
-    std::cout << sizeof(rand_unit_vectors) << std::endl << sizeof(rand_unit_disks) << std::endl << sizeof(rand_squares) << std::endl << sizeof(rand_vectors) << std::endl;
-
     unsigned int randUBO_1, randUBO_2;
-    int randsize = 2048 * sizeof(float) * 4;
-    int rand_unit = sizeof(float) * 4;
 
     glGenBuffers(1, &randUBO_1);
     glBindBuffer(GL_UNIFORM_BUFFER, randUBO_1);
-    glBufferData(GL_UNIFORM_BUFFER, 2*randsize, NULL, GL_STATIC_DRAW);
+    glBufferData(GL_UNIFORM_BUFFER, sizeof(rand_unit_vectors) + sizeof(rand_unit_disks), NULL, GL_STATIC_DRAW);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
     unsigned int uniformBlockIndexRand_1 = glGetUniformBlockIndex(ourShader.ID, "Precomp_1");
     glUniformBlockBinding(ourShader.ID, uniformBlockIndexRand_1, 3);
-    glBindBufferRange(GL_UNIFORM_BUFFER, 3, randUBO_1, 0, 2*randsize);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 3, randUBO_1, 0, sizeof(rand_unit_vectors) + sizeof(rand_unit_disks));
     glBindBuffer(GL_UNIFORM_BUFFER, randUBO_1);
     glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(rand_unit_vectors), &rand_unit_vectors);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
     glBindBuffer(GL_UNIFORM_BUFFER, randUBO_1);
-    glBufferSubData(GL_UNIFORM_BUFFER, randsize, sizeof(rand_unit_disks), &rand_unit_disks);
+    glBufferSubData(GL_UNIFORM_BUFFER, sizeof(rand_unit_vectors), sizeof(rand_unit_disks), &rand_unit_disks);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     glGenBuffers(1, &randUBO_2);
     glBindBuffer(GL_UNIFORM_BUFFER, randUBO_2);
-    glBufferData(GL_UNIFORM_BUFFER, 2*randsize, NULL, GL_STATIC_DRAW);
+    glBufferData(GL_UNIFORM_BUFFER, sizeof(rand_unit_disks) + sizeof(rand_vectors), NULL, GL_STATIC_DRAW);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
     unsigned int uniformBlockIndexRand_2 = glGetUniformBlockIndex(ourShader.ID, "Precomp_2");
     glUniformBlockBinding(ourShader.ID, uniformBlockIndexRand_2, 4);
-    glBindBufferRange(GL_UNIFORM_BUFFER, 4, randUBO_2, 0, 2*randsize);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 4, randUBO_2, 0, sizeof(rand_unit_disks) + sizeof(rand_vectors));
     glBindBuffer(GL_UNIFORM_BUFFER, randUBO_2);
     glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(rand_squares), &rand_squares);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
     glBindBuffer(GL_UNIFORM_BUFFER, randUBO_2);
-    glBufferSubData(GL_UNIFORM_BUFFER, randsize, sizeof(rand_vectors), &rand_vectors);
+    glBufferSubData(GL_UNIFORM_BUFFER, sizeof(rand_squares), sizeof(rand_vectors), &rand_vectors);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     // First pass render to FBO texture
