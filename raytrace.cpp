@@ -65,20 +65,20 @@ unsigned int indices[] = {
 
 // Screen setup values
 auto aspect_ratio = 16.0 / 9.0;
-int SCREEN_WIDTH = 1200;
+int SCREEN_WIDTH = 1920;
 int SCREEN_HEIGHT = 1;
 
-int RENDER_WIDTH = 1200;
+int RENDER_WIDTH = 1920;
 int RENDER_HEIGHT = 1;
 
-int NUM_SAMPLES = 32;
+int NUM_SAMPLES = 512;
 uint32_t BOUNCE_LIMIT = 50;
 
 // Other constants
 const int MAX_NUM_OBJECTS = 128;
 const int SPHERE_UBO_SIZE = MAX_NUM_OBJECTS*32;
 
-int RANDOM_ARRAY_SIZE = 2048;
+int RANDOM_ARRAY_SIZE = 12;
 
 void check_attributes()
 {
@@ -503,8 +503,8 @@ int main(int argc, char* args[])
     objects.add(sphereUBO, sphere2);
     objects.add(sphereUBO, sphere3);
 
-    for (int a = -11; a < 11; a++) {
-        for (int b = -11; b < 11; b++) {
+    for (int a = -11; a < -11; a++) {
+        for (int b = -11; b < -11; b++) {
             auto choose_mat = random_float();
             point3 centre(a + 0.9*random_float(), 0.2, b + 0.9*random_float());
 

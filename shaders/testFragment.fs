@@ -306,7 +306,7 @@ void dialectric(material m, inout hit h, inout ray r, inout rand_state state)
   float sin_theta =  sqrt(1.0 - cos_theta * cos_theta);
   bool cannot_refract = rel_refract_index * sin_theta > 1.0;
 
-  if (cannot_refract || shlick(cos_theta, rel_refract_index) > random_float(state)) {
+  if (cannot_refract || shlick(cos_theta, rel_refract_index) > 1) {
     r.dir = reflect(unit_dir, unit_normal);
   } else { 
     r.dir = refract(unit_dir, unit_normal, rel_refract_index);
@@ -363,7 +363,7 @@ vec3 random_square(inout rand_state s) { return random_square(s.s); }
 float random_float(inout rand_state s) { return random_float(s.s); }
 
 int idxcycle(inout cyclestate cs) {
-  return cs.idx = int(mod(cs.idx + cs.offset, 2011));
+  return cs.idx = int(mod(cs.idx + cs.offset, 11));
 }
 
 vec3 random_unit_vector(inout cyclestate cs) {
