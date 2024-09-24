@@ -71,8 +71,8 @@ int SCREEN_HEIGHT = 1;
 int RENDER_WIDTH = 1200;
 int RENDER_HEIGHT = 1;
 
-int NUM_SAMPLES = 16;
-uint32_t BOUNCE_LIMIT = 100;
+int NUM_SAMPLES = 32;
+uint32_t BOUNCE_LIMIT = 50;
 
 // Other constants
 const int MAX_NUM_OBJECTS = 128;

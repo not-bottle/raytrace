@@ -73,14 +73,14 @@ struct sphere
 
 layout (std140) uniform Precomp_1
 {
-  vec3[8192] unit_vectors;
-  vec3[8192] unit_disks;
+  vec3[2048] unit_vectors;
+  vec3[2048] unit_disks;
 };
 
 layout (std140) uniform Precomp_2
 {
-  vec3[8192] rand_squares;
-  vec3[8192] random_vectors;
+  vec3[2048] rand_squares;
+  vec3[2048] random_vectors;
 };
 
 layout (std140) uniform Materials
@@ -306,7 +306,7 @@ void dialectric(material m, inout hit h, inout ray r, inout rand_state state)
   float sin_theta =  sqrt(1.0 - cos_theta * cos_theta);
   bool cannot_refract = rel_refract_index * sin_theta > 1.0;
 
-  if (cannot_refract) {
+  if (cannot_refract || shlick(cos_theta, rel_refract_index) > random_float(state)) {
     r.dir = reflect(unit_dir, unit_normal);
   } else { 
     r.dir = refract(unit_dir, unit_normal, rel_refract_index);
