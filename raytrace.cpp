@@ -68,11 +68,11 @@ auto aspect_ratio = 16.0 / 9.0;
 int SCREEN_WIDTH = 1200;
 int SCREEN_HEIGHT = 1;
 
-int RENDER_WIDTH = 800;
+int RENDER_WIDTH = 1200;
 int RENDER_HEIGHT = 1;
 
-int NUM_SAMPLES = 32;
-uint32_t BOUNCE_LIMIT = 50;
+int NUM_SAMPLES = 16;
+uint32_t BOUNCE_LIMIT = 100;
 
 // Other constants
 const int MAX_NUM_OBJECTS = 128;
@@ -510,13 +510,13 @@ int main(int argc, char* args[])
 
             if ((centre - point3(4, 0.2, 0)).length() > 0.9) {
 
-                if (choose_mat < 0.8) {
+                if (choose_mat < 0.5) {
                     auto albedo = colour::random() * colour::random();
                     lambertian sphere_material = lambertian(albedo);
                     materials.add(matUBO, sphere_material);
                     sphere spherex = sphere(0.2, centre, &sphere_material);
                     objects.add(sphereUBO, spherex);
-                } else if (choose_mat < 0.95) {
+                } else if (choose_mat < 0.8) {
                     auto albedo = colour::random(0.5, 1);
                     auto fuzz = random_float(0, 0.5);
                     metallic sphere_material = metallic(albedo, fuzz);
@@ -692,13 +692,13 @@ void load_final_scene(material_list materials, hittable_list objects, unsigned i
 
             if ((centre - point3(4, 0.2, 0)).length() > 0.9) {
 
-                if (choose_mat < 0.8) {
+                if (choose_mat < 0.2) {
                     auto albedo = colour::random() * colour::random();
                     lambertian sphere_material = lambertian(albedo);
                     materials.add(matUBO, sphere_material);
                     sphere spherex = sphere(0.2, centre, &sphere_material);
                     objects.add(sphereUBO, spherex);
-                } else if (choose_mat < 0.95) {
+                } else if (choose_mat < 0.4) {
                     auto albedo = colour::random(0.5, 1);
                     auto fuzz = random_float(0, 0.5);
                     metallic sphere_material = metallic(albedo, fuzz);
