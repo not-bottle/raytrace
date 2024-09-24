@@ -142,32 +142,16 @@ void main()
 
     state.s = cs;
 
-    float rand = unit_disks[2010].x;
-    if (rand < 0) {
-      rand = -rand;
-    }
-
-    vec3 luma = vec3(rand);
     vec3 col;
 
-    int e = 2010;
-
-    if(gl_FragCoord.x < 200) {
-      col = unit_vectors[0];
-    } else if (gl_FragCoord.x < 400) {
-      col = unit_vectors[e];
-    } else if (gl_FragCoord.x < 600) {
-      col = unit_disks[0];
+    if (gl_FragCoord.x < 400) {
+      col = random_unit_vector(state);
     } else if (gl_FragCoord.x < 800) {
-      col = unit_disks[e];
-    } else if (gl_FragCoord.x < 1000) {
-      col = rand_squares[0];
+      col = random_unit_disk(state);
     } else if (gl_FragCoord.x < 1200) {
-      col = rand_squares[e];
-    } else if (gl_FragCoord.x < 1400) {
-      col = random_vectors[0];
+      col = random_square(state);
     } else {
-      col = random_vectors[e];
+      col = vec3(random_float(state));
     }
     FragColour = vec4(col, 0.0f);
     return;
