@@ -324,11 +324,6 @@ int main(int argc, char* args[])
 
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-    // RANDOM GENERATION
-    randgen r {};
-    vec3 rand_unit_vectors[RANDOM_ARRAY_SIZE];
-    r.gen_unit_vectors(rand_unit_vectors, RANDOM_ARRAY_SIZE);
-
     // Raytracing setup
 
     point3 lookfrom = point3(0, 0, 0);
@@ -450,17 +445,50 @@ int main(int argc, char* args[])
     //objects.add(sphereUBO, left2);
     //objects.add(sphereUBO, right2);
 
-    unsigned int randUBO;
-    int randsize = RANDOM_ARRAY_SIZE * sizeof(float) * 3;
-    glGenBuffers(1, &randUBO);
-    glBindBuffer(GL_UNIFORM_BUFFER, randUBO);
-    glBufferData(GL_UNIFORM_BUFFER, randsize, NULL, GL_STATIC_DRAW);
+    // RANDOM GENERATION
+    randgen r {};
+    vec4 rand_unit_vectors[RANDOM_ARRAY_SIZE];
+    vec4 rand_unit_disks[RANDOM_ARRAY_SIZE];
+    vec4 rand_squares[RANDOM_ARRAY_SIZE];
+    vec4 rand_vectors[RANDOM_ARRAY_SIZE];
+
+    r.gen_unit_vectors(rand_unit_vectors, RANDOM_ARRAY_SIZE);
+    r.gen_unit_disks(rand_unit_disks, RANDOM_ARRAY_SIZE);
+    r.gen_rand_squares(rand_squares, RANDOM_ARRAY_SIZE);
+    r.gen_rand_vectors(rand_vectors, RANDOM_ARRAY_SIZE);
+
+    std::cout << sizeof(rand_unit_vectors) << std::endl << sizeof(rand_unit_disks) << std::endl << sizeof(rand_squares) << std::endl << sizeof(rand_vectors) << std::endl;
+
+    unsigned int randUBO_1, randUBO_2;
+    int randsize = 2048 * sizeof(float) * 4;
+    int rand_unit = sizeof(float) * 4;
+
+    glGenBuffers(1, &randUBO_1);
+    glBindBuffer(GL_UNIFORM_BUFFER, randUBO_1);
+    glBufferData(GL_UNIFORM_BUFFER, 2*randsize, NULL, GL_STATIC_DRAW);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
-    unsigned int uniformBlockIndexRand = glGetUniformBlockIndex(ourShader.ID, "Precomp");
-    glUniformBlockBinding(ourShader.ID, uniformBlockIndexRand, 3);
-    glBindBufferRange(GL_UNIFORM_BUFFER, 3, randUBO, 0, randsize);
-    glBindBuffer(GL_UNIFORM_BUFFER, randUBO);
+    unsigned int uniformBlockIndexRand_1 = glGetUniformBlockIndex(ourShader.ID, "Precomp_1");
+    glUniformBlockBinding(ourShader.ID, uniformBlockIndexRand_1, 3);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 3, randUBO_1, 0, 2*randsize);
+    glBindBuffer(GL_UNIFORM_BUFFER, randUBO_1);
     glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(rand_unit_vectors), &rand_unit_vectors);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    glBindBuffer(GL_UNIFORM_BUFFER, randUBO_1);
+    glBufferSubData(GL_UNIFORM_BUFFER, randsize, sizeof(rand_unit_disks), &rand_unit_disks);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+    glGenBuffers(1, &randUBO_2);
+    glBindBuffer(GL_UNIFORM_BUFFER, randUBO_2);
+    glBufferData(GL_UNIFORM_BUFFER, 2*randsize, NULL, GL_STATIC_DRAW);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    unsigned int uniformBlockIndexRand_2 = glGetUniformBlockIndex(ourShader.ID, "Precomp_2");
+    glUniformBlockBinding(ourShader.ID, uniformBlockIndexRand_2, 4);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 4, randUBO_2, 0, 2*randsize);
+    glBindBuffer(GL_UNIFORM_BUFFER, randUBO_2);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(rand_squares), &rand_squares);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    glBindBuffer(GL_UNIFORM_BUFFER, randUBO_2);
+    glBufferSubData(GL_UNIFORM_BUFFER, randsize, sizeof(rand_vectors), &rand_vectors);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     // First pass render to FBO texture

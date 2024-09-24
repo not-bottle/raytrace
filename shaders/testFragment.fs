@@ -25,8 +25,17 @@ uniform uint bounce_limit;
 
 out vec4 FragColour;
 
+struct cyclestate {
+  int idx;
+  int offset;
+};
+
 struct xorshift32_state {
   uint a;
+};
+
+struct rand_state {
+  cyclestate s;  
 };
 
 struct hit
@@ -62,9 +71,16 @@ struct sphere
   vec3 origin;
 };
 
-layout (std140) uniform Precomp
+layout (std140) uniform Precomp_1
 {
-  vec3[2011] unit_vectors;
+  vec3[2048] unit_vectors;
+  vec3[2048] unit_disks;
+};
+
+layout (std140) uniform Precomp_2
+{
+  vec3[2048] rand_squares;
+  vec3[2048] random_vectors;
 };
 
 layout (std140) uniform Materials
@@ -82,17 +98,29 @@ bool near_zero(vec3 v);
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig);
 hit hit_any(vec3 ray_orig, vec3 ray_dir);
 
-ray bounce(ray r, inout xorshift32_state state);
-vec3 raycast(vec3 ray_orig, vec3 ray_dir, inout xorshift32_state state);
+ray bounce(ray r, inout rand_state state);
+vec3 raycast(vec3 ray_orig, vec3 ray_dir, inout rand_state state);
 
 vec3 shade_sky(vec3 dir, vec3 albedo);
 float shlick(float cosine, float rel_refract_index);
 
-void material_shade(inout hit h, inout ray r, inout xorshift32_state state);
-void lambertian(material m, inout hit h, inout ray r, inout xorshift32_state state);
-void metallic(material m, inout hit h, inout ray r, inout xorshift32_state state);
-void dialectric(material m, inout hit h, inout ray r, inout xorshift32_state state);
+void material_shade(inout hit h, inout ray r, inout rand_state state);
+void lambertian(material m, inout hit h, inout ray r, inout rand_state state);
+void metallic(material m, inout hit h, inout ray r, inout rand_state state);
+void dialectric(material m, inout hit h, inout ray r, inout rand_state state);
+
+vec3 random_unit_vector(inout rand_state s);
+vec3 random_on_hemisphere(inout rand_state s, vec3 normal);
+vec3 random_unit_disk(inout rand_state s);
+vec3 random_square(inout rand_state s);
+float random_float(inout rand_state s);
+
 int idxcycle(inout int idx, int rand_offset);
+vec3 random_unit_vector(inout cyclestate cs);
+vec3 random_on_hemisphere(inout cyclestate cs, vec3 normal);
+vec3 random_unit_disk(inout cyclestate cs);
+vec3 random_square(inout cyclestate cs);
+float random_float(inout cyclestate cs);
 
 uint xorshift32(inout xorshift32_state state);
 float rand_float(inout xorshift32_state state);
@@ -105,13 +133,43 @@ void main()
 {
   if (gl_FragCoord.x < 10000) {
     vec4 tex = texture(screenTexture, TexCoords);
-    xorshift32_state state;
-    state.a = floatBitsToUint(tex.x);
 
-    int rand_idx = int(mod(floatBitsToInt(tex.x), 2011));
-    int rand_offset = rand_idx;
+    rand_state state;
+    cyclestate cs;
 
-    FragColour = vec4((unit_vectors[idxcycle(rand_idx, rand_offset)]/2) + 0.5, 0.0f);
+    cs.idx = int(mod(floatBitsToInt(tex.x), 2011));
+    cs.offset = cs.idx;
+
+    state.s = cs;
+
+    float rand = unit_disks[2010].x;
+    if (rand < 0) {
+      rand = -rand;
+    }
+
+    vec3 luma = vec3(rand);
+    vec3 col;
+
+    int e = 2010;
+
+    if(gl_FragCoord.x < 200) {
+      col = unit_vectors[0];
+    } else if (gl_FragCoord.x < 400) {
+      col = unit_vectors[e];
+    } else if (gl_FragCoord.x < 600) {
+      col = unit_disks[0];
+    } else if (gl_FragCoord.x < 800) {
+      col = unit_disks[e];
+    } else if (gl_FragCoord.x < 1000) {
+      col = rand_squares[0];
+    } else if (gl_FragCoord.x < 1200) {
+      col = rand_squares[e];
+    } else if (gl_FragCoord.x < 1400) {
+      col = random_vectors[0];
+    } else {
+      col = random_vectors[e];
+    }
+    FragColour = vec4(col, 0.0f);
     return;
 
     vec3 frag_loc;
@@ -122,7 +180,7 @@ void main()
 
     for (int i=0;i<num_samples;i++)
     {
-      rand_square = vec2(rand_float(state) - 0.5, rand_float(state) - 0.5);
+      rand_square = random_square(state).xy;
       frag_loc = viewport_top_left + (gl_FragCoord.x + rand_square.x)*delta_u 
                                     + (gl_FragCoord.y + rand_square.y)*delta_v;
 
@@ -207,7 +265,7 @@ hit hit_any(vec3 ray_orig, vec3 ray_dir)
   return h;
 }
 
-ray bounce(ray r, inout xorshift32_state state)
+ray bounce(ray r, inout rand_state state)
 {
   hit h = hit_any(r.origin, r.dir);
 
@@ -226,7 +284,7 @@ ray bounce(ray r, inout xorshift32_state state)
   return r;
 }
 
-void material_shade(inout hit h, inout ray r, inout xorshift32_state state)
+void material_shade(inout hit h, inout ray r, inout rand_state state)
 {
   material m = materials[h.mat];
 
@@ -244,7 +302,7 @@ void material_shade(inout hit h, inout ray r, inout xorshift32_state state)
   return;
 }
 
-void lambertian(material m, inout hit h, inout ray r, inout xorshift32_state state)
+void lambertian(material m, inout hit h, inout ray r, inout rand_state state)
 {
   r.dir = h.normal + random_on_hemisphere(state, h.normal);
   if (near_zero(r.dir)) {
@@ -255,7 +313,7 @@ void lambertian(material m, inout hit h, inout ray r, inout xorshift32_state sta
   return;
 }
 
-void metallic(material m, inout hit h, inout ray r, inout xorshift32_state state)
+void metallic(material m, inout hit h, inout ray r, inout rand_state state)
 {
   r.dir = reflect(r.dir, normalize(h.normal));
   r.dir = normalize(r.dir) + (m.param1 * random_unit_vector(state));
@@ -268,7 +326,7 @@ void metallic(material m, inout hit h, inout ray r, inout xorshift32_state state
   return;
 }
 
-void dialectric(material m, inout hit h, inout ray r, inout xorshift32_state state)
+void dialectric(material m, inout hit h, inout ray r, inout rand_state state)
 {
   float rel_refract_index = m.param1;
   if (!h.interior) {
@@ -282,7 +340,7 @@ void dialectric(material m, inout hit h, inout ray r, inout xorshift32_state sta
   float sin_theta =  sqrt(1.0 - cos_theta * cos_theta);
   bool cannot_refract = rel_refract_index * sin_theta > 1.0;
 
-  if (cannot_refract || shlick(cos_theta, rel_refract_index) > rand_float(state)) {
+  if (cannot_refract || shlick(cos_theta, rel_refract_index) > random_float(state)) {
     r.dir = reflect(unit_dir, unit_normal);
   } else { 
     r.dir = refract(unit_dir, unit_normal, rel_refract_index);
@@ -293,7 +351,7 @@ void dialectric(material m, inout hit h, inout ray r, inout xorshift32_state sta
 }
 
 
-vec3 raycast(vec3 ray_orig, vec3 ray_dir, inout xorshift32_state state)
+vec3 raycast(vec3 ray_orig, vec3 ray_dir, inout rand_state state)
 {
   ray r;
   r.count = 0u;
@@ -326,6 +384,53 @@ vec3 shade_sky(vec3 dir, vec3 albedo) {
 
   return albedo;
 }
+
+bool near_zero(vec3 v) {
+  float s = 1e-8;
+  return (abs(v.x) < s && abs(v.y) < s && abs(v.z) < s);
+}
+
+vec3 random_unit_vector(inout rand_state s) { return random_unit_vector(s.s); }
+vec3 random_on_hemisphere(inout rand_state s, vec3 normal) { return random_on_hemisphere(s.s, normal); }
+vec3 random_unit_disk(inout rand_state s) { return random_unit_disk(s.s); }
+vec3 random_square(inout rand_state s) { return random_square(s.s); }
+float random_float(inout rand_state s) { return random_float(s.s); }
+
+int idxcycle(inout cyclestate cs) {
+  return cs.idx = int(mod(cs.idx + cs.offset, 2011));
+}
+
+vec3 random_unit_vector(inout cyclestate cs) {
+  return unit_vectors[idxcycle(cs)];
+}
+
+vec3 random_on_hemisphere(inout cyclestate cs, vec3 normal) {
+  vec3 on_unit_sphere = random_unit_vector(cs);
+
+  uint dpu = floatBitsToUint(dot(on_unit_sphere, normal));
+  uint ieee_sign_mask = 0x80000000u;
+  uint sign = dpu & ieee_sign_mask;
+
+  uvec3 res = floatBitsToUint(on_unit_sphere) ^ sign;
+
+  return uintBitsToFloat(res);
+}
+
+vec3 random_unit_disk(inout cyclestate cs) {
+  return unit_disks[idxcycle(cs)];
+}
+
+vec3 random_square(inout cyclestate cs) {
+  return rand_squares[idxcycle(cs)];
+}
+
+float random_float(inout cyclestate cs) {
+  return random_vectors[idxcycle(cs)].x;
+}
+
+
+
+
 
 uint xorshift32(inout xorshift32_state state) {
   uint x = state.a;
@@ -393,13 +498,4 @@ vec3 random_on_hemisphere(inout xorshift32_state state, vec3 normal) {
   } else {
     return -on_unit_sphere;
   }
-}
-
-bool near_zero(vec3 v) {
-  float s = 1e-8;
-  return (abs(v.x) < s && abs(v.y) < s && abs(v.z) < s);
-}
-
-int idxcycle(inout int idx, int rand_offset) {
-  return idx = int(mod(idx + rand_offset, 2011));
 }

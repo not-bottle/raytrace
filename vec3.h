@@ -99,6 +99,11 @@ vec3 operator+(const vec3 &u, const vec3 &v)
     return vec3{u[0] + v[0], u[1] + v[1], u[2] + v[2]};
 }
 
+vec3 operator+(const vec3 &u, float t) 
+{
+    return vec3{u[0] + t, u[1] + t, u[2] + t};
+}
+
 vec3 operator-(const vec3 &u, const vec3 &v) 
 {
     return vec3{u[0] - v[0], u[1] - v[1], u[2] - v[2]};
