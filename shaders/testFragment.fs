@@ -261,7 +261,7 @@ void material_shade(inout hit h, inout ray r, inout rand_state state)
   } else if (m.type == 3) {
     dialectric(m, h, r, state);
   } else {
-    r.albedo = vec3(1.0, 0.0, 0.0);
+    r.albedo = vec3(0.0, 0.0, 0.0);
     r.bounce = false;
   }
 
@@ -287,7 +287,7 @@ void metallic(material m, inout hit h, inout ray r, inout rand_state state)
 
   r.bounce = dot(r.dir, h.normal) > 0;
   if (!r.bounce) {
-    r.albedo = vec3(1.0f, 0.0f, 0.0f);
+    r.albedo = vec3(0.0f, 0.0f, 0.0f);
   }
   return;
 }
@@ -363,7 +363,7 @@ vec3 random_square(inout rand_state s) { return random_square(s.s); }
 float random_float(inout rand_state s) { return random_float(s.s); }
 
 int idxcycle(inout cyclestate cs) {
-  return cs.idx = int(mod(cs.idx + cs.offset, 7919));
+  return cs.idx = int(mod(cs.idx + cs.offset, 2011));
 }
 
 vec3 random_unit_vector(inout cyclestate cs) {

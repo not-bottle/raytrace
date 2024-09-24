@@ -15,6 +15,9 @@
 #include "material_list.h"
 #include "material.h"
 
+void load_three_spheres(material_list materials, hittable_list objects, unsigned int matUBO, unsigned int sphereUBO);
+void load_final_scene(material_list materials, hittable_list objects, unsigned int matUBO, unsigned int sphereUBO);
+
 struct fb_help {
     unsigned int fbo;
     unsigned int rbo;
@@ -62,20 +65,20 @@ unsigned int indices[] = {
 
 // Screen setup values
 auto aspect_ratio = 16.0 / 9.0;
-int SCREEN_WIDTH = 1600;
+int SCREEN_WIDTH = 1200;
 int SCREEN_HEIGHT = 1;
 
-int RENDER_WIDTH = 1600;
+int RENDER_WIDTH = 800;
 int RENDER_HEIGHT = 1;
 
-int NUM_SAMPLES = 512;
+int NUM_SAMPLES = 32;
 uint32_t BOUNCE_LIMIT = 50;
 
 // Other constants
 const int MAX_NUM_OBJECTS = 128;
 const int SPHERE_UBO_SIZE = MAX_NUM_OBJECTS*32;
 
-int RANDOM_ARRAY_SIZE = 8192;
+int RANDOM_ARRAY_SIZE = 2048;
 
 void check_attributes()
 {
@@ -326,12 +329,12 @@ int main(int argc, char* args[])
 
     // Raytracing setup
 
-    point3 lookfrom = point3(0, 0, 0);
-    point3 lookat = point3(0, 0, -1);
+    point3 lookfrom = point3(13, 2, 3);
+    point3 lookat = point3(0, 0, 0);
     vec3 vup = vec3(0, 1, 0);
-    float vfov = 90.0;
-    float defocus_angle = 12;
-    float focus_dist = 1;
+    float vfov = 20.0;
+    float defocus_angle = 0.6;
+    float focus_dist = 10;
 
     vec3 u, v, w;
 
@@ -376,72 +379,30 @@ int main(int argc, char* args[])
     unsigned int matUBO;
     glGenBuffers(1, &matUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, matUBO);
-    glBufferData(GL_UNIFORM_BUFFER, 4096, NULL, GL_STATIC_DRAW); // Allocate 4096 bytes for UBO
+    glBufferData(GL_UNIFORM_BUFFER, 20000, NULL, GL_STATIC_DRAW); // Allocate 4096 bytes for UBO
     // Note, can hold 128 32byte materials
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     // Bind UBO in sphere to uboBlock
     unsigned int uniformBlockIndexMat = glGetUniformBlockIndex(ourShader.ID, "Materials");
     glUniformBlockBinding(ourShader.ID, uniformBlockIndexMat, 0);
-    glBindBufferRange(GL_UNIFORM_BUFFER, 0, matUBO, 0, 4096);
-
-    // Add Materials
-    material_list materials = material_list();
-
-    lambertian mat_ground = lambertian(vec3(0.8, 0.8, 0.0));
-    lambertian mat_centre = lambertian(vec3(0.1, 0.2, 0.5));
-    dialectric mat_left = dialectric(1.5);
-    dialectric mat_left_bubble = dialectric(1.0/1.5);
-    metallic mat_right = metallic(vec3(0.8, 0.6, 0.2), 0.0);
-
-    lambertian mat_left2 = lambertian(vec3(1.0, 0.0, 0.0));
-    lambertian mat_right2 = lambertian(vec3(0.0, 0.0, 1.0));
-
-    materials.add(matUBO, mat_ground);
-    materials.add(matUBO, mat_centre);
-    materials.add(matUBO, mat_left);
-    materials.add(matUBO, mat_right);
-    materials.add(matUBO, mat_left_bubble);
-
-    materials.add(matUBO, mat_left2);
-    materials.add(matUBO, mat_right2);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 0, matUBO, 0, 20000);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     // SPHERES
 
     unsigned int sphereUBO;
     glGenBuffers(1, &sphereUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, sphereUBO);
-    glBufferData(GL_UNIFORM_BUFFER, 4096, NULL, GL_STATIC_DRAW); // Allocate 4096 bytes for UBO
+    glBufferData(GL_UNIFORM_BUFFER, 20000, NULL, GL_STATIC_DRAW); // Allocate 4096 bytes for UBO
     // Note, can hold 128 32byte spheres
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     // Bind UBO in sphere to uboBlock
     unsigned int uniformBlockIndexSphere = glGetUniformBlockIndex(ourShader.ID, "Spheres");
     glUniformBlockBinding(ourShader.ID, uniformBlockIndexSphere, 1);
-    glBindBufferRange(GL_UNIFORM_BUFFER, 1, sphereUBO, 0, 4096);
-
-    // Add spheres
-    hittable_list objects = hittable_list();
-
-    sphere ground = sphere(100.0, vec3(0.0, -100.5, -1.0), &mat_ground);
-    sphere centre = sphere(0.5, vec3(0.0, 0.0, -1.2), &mat_centre);
-    sphere left = sphere(0.5, vec3(-1.0, 0.0, -1.0), &mat_left);
-    sphere left_bubble = sphere(0.4, vec3(-1.0, 0.0, -1.0), &mat_left_bubble);
-    sphere right = sphere(0.5, vec3(1.0, 0.0, -1.0), &mat_right);
-
-    auto R = std::cos(pi/4);
-
-    sphere left2 = sphere(R, vec3(-R, 0, -1), &mat_left2);
-    sphere right2 = sphere(R, vec3(R, 0, -1), &mat_right2);
-
-    objects.add(sphereUBO, ground);
-    objects.add(sphereUBO, centre);
-    objects.add(sphereUBO, left);
-    //objects.add(sphereUBO, left_bubble);
-    objects.add(sphereUBO, right);
-
-    //objects.add(sphereUBO, left2);
-    //objects.add(sphereUBO, right2);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 1, sphereUBO, 0, 20000);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     // RANDOM GENERATION
     randgen r {};
@@ -484,6 +445,93 @@ int main(int argc, char* args[])
     glBindBuffer(GL_UNIFORM_BUFFER, randUBO_2);
     glBufferSubData(GL_UNIFORM_BUFFER, sizeof(rand_squares), sizeof(rand_vectors), &rand_vectors);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+    // Set up scene
+
+    material_list materials = material_list();
+    hittable_list objects = hittable_list();
+
+    lambertian mat_ground = lambertian(vec3(0.2, 0.1, 0.0));
+    // lambertian mat_centre = lambertian(vec3(0.1, 0.2, 0.5));
+    // dialectric mat_left = dialectric(1.5);
+    // dialectric mat_left_bubble = dialectric(1.0/1.5);
+    // metallic mat_right = metallic(vec3(0.8, 0.6, 0.2), 0.0);
+
+    // lambertian mat_left2 = lambertian(vec3(1.0, 0.0, 0.0));
+    // lambertian mat_right2 = lambertian(vec3(0.0, 0.0, 1.0));
+
+    // materials.add(matUBO, mat_ground);
+    // materials.add(matUBO, mat_centre);
+    // materials.add(matUBO, mat_left);
+    // materials.add(matUBO, mat_right);
+    // materials.add(matUBO, mat_left_bubble);
+
+    // materials.add(matUBO, mat_left2);
+    // materials.add(matUBO, mat_right2);
+
+    // Add spheres
+
+    // sphere ground = sphere(1000.0, vec3(0.0, -1000.5, -1), &mat_ground);
+    // sphere centre = sphere(0.5, vec3(0.0, 0.0, -1.2), &mat_centre);
+    // sphere left = sphere(0.5, vec3(-1.0, 0.0, -1.0), &mat_left);
+    // sphere left_bubble = sphere(0.4, vec3(-1.0, 0.0, -1.0), &mat_left_bubble);
+    // sphere right = sphere(0.5, vec3(1.0, 0.0, -1.0), &mat_right);
+
+    // objects.add(sphereUBO, ground);
+    // objects.add(sphereUBO, centre);
+    // objects.add(sphereUBO, left);
+    // objects.add(sphereUBO, right);
+
+    lambertian ground_material = lambertian(colour(0.5, 0.5, 0.5));
+    sphere ground = sphere(1000, point3(0, -1000, 0), &ground_material);
+    materials.add(matUBO, ground_material);
+    objects.add(sphereUBO, ground);
+
+    dialectric material1 = dialectric(1.5);
+    lambertian material2 = lambertian(colour(0.4, 0.2, 0.1));
+    metallic   material3 = metallic(colour(0.7, 0.6, 0.5), 0.0);
+
+    materials.add(matUBO, material1);
+    materials.add(matUBO, material2);
+    materials.add(matUBO, material3);
+
+    sphere     sphere1 = sphere(1.0, point3(0, 1, 0), &material1);
+    sphere     sphere2 = sphere(1.0, point3(-4, 1, 0), &material2);
+    sphere     sphere3 = sphere(1.0, point3(4, 1, 0), &material3);
+
+    objects.add(sphereUBO, sphere1);
+    objects.add(sphereUBO, sphere2);
+    objects.add(sphereUBO, sphere3);
+
+    for (int a = -11; a < 11; a++) {
+        for (int b = -11; b < 11; b++) {
+            auto choose_mat = random_float();
+            point3 centre(a + 0.9*random_float(), 0.2, b + 0.9*random_float());
+
+            if ((centre - point3(4, 0.2, 0)).length() > 0.9) {
+
+                if (choose_mat < 0.8) {
+                    auto albedo = colour::random() * colour::random();
+                    lambertian sphere_material = lambertian(albedo);
+                    materials.add(matUBO, sphere_material);
+                    sphere spherex = sphere(0.2, centre, &sphere_material);
+                    objects.add(sphereUBO, spherex);
+                } else if (choose_mat < 0.95) {
+                    auto albedo = colour::random(0.5, 1);
+                    auto fuzz = random_float(0, 0.5);
+                    metallic sphere_material = metallic(albedo, fuzz);
+                    materials.add(matUBO, sphere_material);
+                    sphere spherex = sphere(0.2, centre, &sphere_material);
+                    objects.add(sphereUBO, spherex);
+                } else {
+                    dialectric sphere_material = dialectric(1.5);
+                    materials.add(matUBO, sphere_material);
+                    sphere spherex = sphere(0.2, centre, &sphere_material);
+                    objects.add(sphereUBO, spherex);
+                }
+            }
+        }
+    }
 
     // First pass render to FBO texture
 
@@ -578,4 +626,92 @@ void createFrameBuffer(fb_help &fb)
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     return;
+}
+
+void load_three_spheres(material_list materials, hittable_list objects, unsigned int matUBO, unsigned int sphereUBO) {
+    // Add Materials
+
+    lambertian mat_ground = lambertian(vec3(0.8, 0.8, 0.0));
+    lambertian mat_centre = lambertian(vec3(0.1, 0.2, 0.5));
+    dialectric mat_left = dialectric(1.5);
+    dialectric mat_left_bubble = dialectric(1.0/1.5);
+    metallic mat_right = metallic(vec3(0.8, 0.6, 0.2), 0.0);
+
+    lambertian mat_left2 = lambertian(vec3(1.0, 0.0, 0.0));
+    lambertian mat_right2 = lambertian(vec3(0.0, 0.0, 1.0));
+
+    materials.add(matUBO, mat_ground);
+    materials.add(matUBO, mat_centre);
+    materials.add(matUBO, mat_left);
+    materials.add(matUBO, mat_right);
+    materials.add(matUBO, mat_left_bubble);
+
+    materials.add(matUBO, mat_left2);
+    materials.add(matUBO, mat_right2);
+
+    // Add spheres
+
+    sphere ground = sphere(100.0, vec3(0.0, -100.5, -1.0), &mat_ground);
+    sphere centre = sphere(0.5, vec3(0.0, 0.0, -1.2), &mat_centre);
+    sphere left = sphere(0.5, vec3(-1.0, 0.0, -1.0), &mat_left);
+    sphere left_bubble = sphere(0.4, vec3(-1.0, 0.0, -1.0), &mat_left_bubble);
+    sphere right = sphere(0.5, vec3(1.0, 0.0, -1.0), &mat_right);
+
+    objects.add(sphereUBO, ground);
+    objects.add(sphereUBO, centre);
+    objects.add(sphereUBO, left);
+    objects.add(sphereUBO, right);
+}
+
+void load_final_scene(material_list materials, hittable_list objects, unsigned int matUBO, unsigned int sphereUBO) {
+    lambertian ground_material = lambertian(colour(0.5, 0.5, 0.5));
+    sphere ground = sphere(1000, point3(0, -1000, 0), &ground_material);
+    materials.add(matUBO, ground_material);
+    objects.add(sphereUBO, ground);
+
+    dialectric material1 = dialectric(1.5);
+    lambertian material2 = lambertian(colour(0.4, 0.2, 0.1));
+    metallic   material3 = metallic(colour(0.7, 0.6, 0.5), 0.0);
+
+    materials.add(matUBO, material1);
+    materials.add(matUBO, material2);
+    materials.add(matUBO, material3);
+
+    sphere     sphere1 = sphere(1.0, point3(0, 1, 0), &material1);
+    sphere     sphere2 = sphere(1.0, point3(-4, 1, 0), &material2);
+    sphere     sphere3 = sphere(1.0, point3(4, 1, 0), &material3);
+
+    objects.add(sphereUBO, sphere1);
+    objects.add(sphereUBO, sphere2);
+    objects.add(sphereUBO, sphere3);
+
+    for (int a = -11; a < 11; a++) {
+        for (int b = -11; b < 11; b++) {
+            auto choose_mat = random_float();
+            point3 centre(a + 0.9*random_float(), 0.2, b + 0.9*random_float());
+
+            if ((centre - point3(4, 0.2, 0)).length() > 0.9) {
+
+                if (choose_mat < 0.8) {
+                    auto albedo = colour::random() * colour::random();
+                    lambertian sphere_material = lambertian(albedo);
+                    materials.add(matUBO, sphere_material);
+                    sphere spherex = sphere(0.2, centre, &sphere_material);
+                    objects.add(sphereUBO, spherex);
+                } else if (choose_mat < 0.95) {
+                    auto albedo = colour::random(0.5, 1);
+                    auto fuzz = random_float(0, 0.5);
+                    metallic sphere_material = metallic(albedo, fuzz);
+                    materials.add(matUBO, sphere_material);
+                    sphere spherex = sphere(0.2, centre, &sphere_material);
+                    objects.add(sphereUBO, spherex);
+                } else {
+                    dialectric sphere_material = dialectric(1.5);
+                    materials.add(matUBO, sphere_material);
+                    sphere spherex = sphere(0.2, centre, &sphere_material);
+                    objects.add(sphereUBO, spherex);
+                }
+            }
+        }
+    }
 }
