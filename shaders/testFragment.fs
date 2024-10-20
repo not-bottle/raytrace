@@ -5,6 +5,11 @@ layout(pixel_center_integer, origin_upper_left) in vec4 gl_FragCoord;
 in vec2 TexCoords;
 uniform sampler2D screenTexture;
 
+uniform float X_MIN;
+uniform float X_MAX; 
+uniform float Y_MIN;
+uniform float Y_MAX;
+
 uniform uint time_u32t;
 
 uniform int num_samples;
@@ -131,6 +136,8 @@ vec3 random_unit_disk(inout xorshift32_state state);
 
 void main()
 {
+  if (gl_FragCoord.x >= X_MIN && gl_FragCoord.x < X_MAX && gl_FragCoord.y >= Y_MIN && gl_FragCoord.y < Y_MAX) {
+
   vec4 tex = texture(screenTexture, TexCoords);
 
   rand_state state;
@@ -171,6 +178,9 @@ void main()
   float gamma = 2.2;
 
   FragColour.rgb = pow(FragColour.rgb, vec3(1.0/gamma));
+  } else {
+    FragColour = vec4(1.0, 0.7, 0.5, 0.0f);
+  }
 }
 
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig)
@@ -363,7 +373,7 @@ vec3 random_square(inout rand_state s) { return random_square(s.s); }
 float random_float(inout rand_state s) { return random_float(s.s); }
 
 int idxcycle(inout cyclestate cs) {
-  return cs.idx = int(mod(cs.idx + cs.offset, 11));
+  return cs.idx = int(mod(cs.idx + cs.offset, 2011));
 }
 
 vec3 random_unit_vector(inout cyclestate cs) {

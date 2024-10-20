@@ -1,9 +1,13 @@
 #include <iostream>
 #include <stdlib.h>
 #include <cmath>
+#include <algorithm>
 
 #include <glad/glad.h>
 #include <SDL2/SDL.h>
+
+#include "raytrace.h"
+#include "glhelp.h"
 
 #include "randgen.h"
 
@@ -18,38 +22,6 @@
 void load_three_spheres(material_list materials, hittable_list objects, unsigned int matUBO, unsigned int sphereUBO);
 void load_final_scene(material_list materials, hittable_list objects, unsigned int matUBO, unsigned int sphereUBO);
 
-struct fb_help {
-    unsigned int fbo;
-    unsigned int rbo;
-    unsigned int tex;
-};
-
-// Start up SDL and create a window
-bool init();
-
-// Code for checking attributes I might not need
-void check_attributes();
-
-// Event polling code contained in here
-void event_handling();
-
-// Free media and shut down SDL
-void close();
-
-void createFrameBuffer(fb_help &fb);
-
-// SDL Objects
-SDL_Window* gWindow = NULL; // Main window
-SDL_Surface* gScreenSurface = NULL; // The window's surface
-SDL_GLContext gContext = NULL;
-
-// Awful way to handle quitting in event loop (change this)
-bool gQuit = false;
-
-const int GLMAJORVERSION = 3;
-const int GLMINORVERSION = 3;
-const int GLPROFILEMASK = SDL_GL_CONTEXT_PROFILE_CORE;
-
 float vertices[] = {
     // positions         // texture coords
      1.0f,  1.0f, 0.0f,    1.0f, 1.0f, // top right
@@ -63,14 +35,6 @@ unsigned int indices[] = {
     1, 2, 3
 };
 
-// Screen setup values
-auto aspect_ratio = 16.0 / 9.0;
-int SCREEN_WIDTH = 1920;
-int SCREEN_HEIGHT = 1;
-
-int RENDER_WIDTH = 1920;
-int RENDER_HEIGHT = 1;
-
 int NUM_SAMPLES = 512;
 uint32_t BOUNCE_LIMIT = 50;
 
@@ -78,136 +42,20 @@ uint32_t BOUNCE_LIMIT = 50;
 const int MAX_NUM_OBJECTS = 128;
 const int SPHERE_UBO_SIZE = MAX_NUM_OBJECTS*32;
 
-int RANDOM_ARRAY_SIZE = 12;
-
-void check_attributes()
-{
-    // Check OpenGL attributes
-    int check = 0;
-    if (SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &check))
-    {
-        std::cerr << "SDL could not get major version! SDL Error: " << SDL_GetError() << '\n';
-    } else {
-        std::cerr << "Requested major version: " << GLMAJORVERSION << ", Actual major version: " << check << '\n';
-    }
-    if (SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &check))
-    {
-        std::cerr << "SDL could not get minor version! SDL Error: " << SDL_GetError() << '\n';
-    } else {
-        std::cerr << "Requested minor version: " << GLMINORVERSION << ", Actual minor version: " << check << '\n';
-    }
-    if (SDL_GL_GetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, &check))
-    {
-        std::cerr << "SDL could not get profile mask! SDL Error: " << SDL_GetError() << '\n';
-    } else {
-        std::cerr << "Requested profile mask: " << GLPROFILEMASK << ", Actual profile mask: " << check << '\n';
-    }
-}
-
-bool init()
-{
-    // Screen size calculations
-    SCREEN_HEIGHT = int(SCREEN_WIDTH / aspect_ratio);
-    SCREEN_HEIGHT = (SCREEN_HEIGHT < 1) ? 1 : SCREEN_HEIGHT;
-
-    RENDER_HEIGHT = int(RENDER_WIDTH / aspect_ratio);
-    RENDER_HEIGHT = (RENDER_HEIGHT < 1) ? 1 : RENDER_HEIGHT;
-
-    bool success = true;
-
-    // Initialize SDL library (suprised by how much worked without this lol)
-    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-
-    // Set OpenGL attributes
-    SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
-    if ( SDL_Init(SDL_INIT_VIDEO) < 0)
-    {
-        std::cerr << "SDL could not initialize! SDL Error: " << SDL_GetError() << '\n';
-        success = false;
-    } else {
-        gWindow = SDL_CreateWindow( "LearnOpenGL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
-                                    SCREEN_WIDTH, SCREEN_HEIGHT, 
-                                    SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-        
-        if (gWindow == NULL)
-        {
-            std::cerr << "SDL Window could not be created! SDL Error: " << SDL_GetError() << '\n';
-            success = false;
-        } else {
-            // Create OpenGL Context for window (and make it current)
-            gContext = SDL_GL_CreateContext(gWindow);
-
-            check_attributes();
-
-            // Get Screen Surface from window
-            gScreenSurface = SDL_GetWindowSurface(gWindow);
-
-            // Initialize glad using SDLs loader
-            // We are casting the SDL_GL_GetProcAddress function object to the GLADloadproc type
-            // 
-            // NOTE: Without this we would have to define a function pointer prototype for every 
-            // OpenGL function we wish to call, then call SDL_GL_GetProcAddress and check that it 
-            // returns a valid value.
-            if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress))
-            {
-                std::cerr << "Failed to initialize GLAD" << std::endl;
-                close();
-                exit(1);
-            }
-
-            // Set OpenGL screen coordinates to match the SDL screen size
-            // 
-            // NOTE: It is possible to set these values as smaller than the
-            // window size. This could be useful if you wanted to put otherwise 
-            // rendered ui or other info around the main display.
-            glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-        }
-    }
-    return success;
-}
-
-void event_handling()
-{
-    SDL_Event e;
-
-    // Poll event, removing it from the queue
-    while (SDL_PollEvent(&e))
-    {
-        // If the event is X-ing out of the window set gQuit to true
-        if (e.type == SDL_QUIT)
-        {
-            gQuit = true;
-        }
-
-        // Window event handling
-        if (e.type == SDL_WINDOWEVENT)
-        {
-            switch (e.window.event)
-            {
-                case SDL_WINDOWEVENT_SIZE_CHANGED:
-                    glViewport(0, 0, e.window.data1, e.window.data2);
-                    break;
-            }
-        } 
-    }
-}
-
-void close()
-{
-    SDL_DestroyWindow(gWindow); // This also destroys gscreenSurface
-    gWindow = NULL;
-    gScreenSurface = NULL;
-
-    SDL_Quit();
-}
+int RANDOM_ARRAY_SIZE = 2048;
 
 
 int main(int argc, char* args[])
 {
-    if(!init())
+    int screen_width = 1600;
+    int render_width = 1200;
+    float aspect_ratio = 16.0/9.0;
+        
+    windowHelp windowhelp = windowHelp(screen_width, render_width, aspect_ratio);
+
+    glHelp glhelp = glHelp(windowhelp.SCREEN_WIDTH, windowhelp.SCREEN_HEIGHT);
+
+    if(!glhelp.init())
     {
         exit(1);
     }
@@ -267,8 +115,6 @@ int main(int argc, char* args[])
 
     // We need to tell OpenGL how it should interpret the
     // vertex data:
-    // (Note: This is because you can specify your own input
-    //  as a vertex attribute)
     // Lots of arguments:
     // 1 - vertex attribute number (specified in vertex shader)
     // 2 - size of vertex attribute (how many vertices)
@@ -291,32 +137,8 @@ int main(int argc, char* args[])
     Shader noiseShader("shaders/testVertex.vs", "shaders/prng.fs");
     Shader texShader("shaders/texVertex.vs", "shaders/texFragment.fs");
 
-
-    /*
-    // CREATE PERLIN NOISE TEXTURE
     glBindFramebuffer(GL_FRAMEBUFFER, perlinfb.fbo);
-    glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
-
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    float PERLIN_GRID_SIZE = 400;
-    float PERLIN_CONTRAST = 1.5;
-    int PERLIN_LAYERS = 12;
-    float PERLIN_LACURNITY = 2;
-
-    noiseShader.use();
-
-    noiseShader.setFloat("GRID_SIZE", PERLIN_GRID_SIZE);
-    noiseShader.setFloat("CONTRAST", PERLIN_CONTRAST);
-    noiseShader.setInt("LAYERS", PERLIN_LAYERS);
-    noiseShader.setFloat("LACURNITY", PERLIN_CONTRAST);
-
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-    */
-
-    glBindFramebuffer(GL_FRAMEBUFFER, perlinfb.fbo);
-    glViewport(0, 0, RENDER_WIDTH, RENDER_HEIGHT);
+    glViewport(0, 0, windowhelp.RENDER_WIDTH, windowhelp.RENDER_HEIGHT);
 
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -329,48 +151,16 @@ int main(int argc, char* args[])
 
     // Raytracing setup
 
-    point3 lookfrom = point3(13, 2, 3);
-    point3 lookat = point3(0, 0, 0);
-    vec3 vup = vec3(0, 1, 0);
-    float vfov = 20.0;
-    float defocus_angle = 0.6;
-    float focus_dist = 10;
+    orientation uvw;
 
-    vec3 u, v, w;
+    uvw.lookfrom = point3(13, 2, 3);
+    uvw.lookat = point3(0, 0, 0);
+    uvw.vup = vec3(0, 1, 0);
+    uvw.vfov = 20.0;
+    uvw.defocus_angle = 0.6;
+    uvw.focus_dist = 10;
 
-    point3 camera_origin = lookfrom;
-
-    auto theta = degrees_to_radians(vfov);
-    auto h = std::tan(theta / 2);
-    auto viewport_height = 2*h*focus_dist;
-    auto viewport_width = (double(RENDER_WIDTH) / double(RENDER_HEIGHT)) * viewport_height;
-
-    w = unit_vector(lookfrom - lookat);
-    u = unit_vector(cross(vup, w));
-    v = cross(w, u);
-
-    vec3 viewport_u = viewport_width * u;
-    vec3 viewport_v = viewport_height * -v;
-
-    vec3 delta_u = viewport_u / RENDER_WIDTH;
-    vec3 delta_v = viewport_v / RENDER_HEIGHT;
-
-    vec3 viewport_top_left = camera_origin - (focus_dist*w)
-                                    - viewport_u/2
-                                    - viewport_v/2;
-
-    auto defocus_radius = focus_dist * std::tan(degrees_to_radians(defocus_angle / 2));
-    vec3 defocus_disk_u = u * defocus_radius;
-    vec3 defocus_disk_v = v * defocus_radius; 
-
-    std::cout << "RENDER_HEIGHT: " << RENDER_HEIGHT << std::endl;
-    std::cout << "RENDER_WIDTH: " << RENDER_WIDTH << std::endl;
-
-    std::cout << "viewport_height: " << viewport_height << std::endl;
-    std::cout << "viewport_width: " << viewport_width << std::endl;
-    std::cout << "viewport_top_left: " << viewport_top_left << std::endl;
-    std::cout << "delta_u: " << delta_u << std::endl;
-    std::cout << "delta_v: " << delta_v << std::endl;
+    cameraSetup(uvw, windowhelp.RENDER_WIDTH, windowhelp.RENDER_HEIGHT);
 
     // Set up UBO data
 
@@ -503,8 +293,8 @@ int main(int argc, char* args[])
     objects.add(sphereUBO, sphere2);
     objects.add(sphereUBO, sphere3);
 
-    for (int a = -11; a < -11; a++) {
-        for (int b = -11; b < -11; b++) {
+    for (int a = -11; a < 11; a++) {
+        for (int b = -11; b < 11; b++) {
             auto choose_mat = random_float();
             point3 centre(a + 0.9*random_float(), 0.2, b + 0.9*random_float());
 
@@ -547,28 +337,42 @@ int main(int argc, char* args[])
     // Activate shader
     ourShader.use();
 
+    float chunk_size = 50.0f;
+    float x_passes = RENDER_HEIGHT / chunk_size;
+    float y_passes = RENDER_WIDTH / chunk_size;
+
+    float xmin, xmax, ymin, ymax;
+
+    xmin = 0.0f;
+    xmax = xmin + chunk_size;
+
     // Shader uniforms
+    ourShader.setFloat("X_MIN", xmin);
+    ourShader.setFloat("X_MAX", xmax);
+    ourShader.setFloat("Y_MIN", ymin);
+    ourShader.setFloat("Y_MAX", ymax);
+
     uint32_t timeValue = SDL_GetTicks();
     ourShader.setUint("time_u32t", timeValue);
 
     ourShader.setInt("num_samples", NUM_SAMPLES);
     ourShader.setUint("bounce_limit", BOUNCE_LIMIT);
 
-    ourShader.setVec3("delta_u", delta_u);
-    ourShader.setVec3("delta_v", delta_v);
-    ourShader.setVec3("camera_origin", camera_origin);
-    ourShader.setVec3("viewport_top_left", viewport_top_left);
+    ourShader.setVec3("delta_u", uvw.delta_u);
+    ourShader.setVec3("delta_v", uvw.delta_v);
+    ourShader.setVec3("camera_origin", uvw.lookfrom);
+    ourShader.setVec3("viewport_top_left", uvw.viewport_top_left);
 
-    ourShader.setFloat("defocus_angle", defocus_angle);
-    ourShader.setVec3("defocus_disk_u", defocus_disk_u);
-    ourShader.setVec3("defocus_disk_v", defocus_disk_v);
+    ourShader.setFloat("defocus_angle", uvw.defocus_angle);
+    ourShader.setVec3("defocus_disk_u", uvw.defocus_disk_u);
+    ourShader.setVec3("defocus_disk_v", uvw.defocus_disk_v);
 
     ourShader.setInt("num_spheres", objects.num);
 
     // Draw triangles
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-    while (!gQuit)
+    while (!glhelp.quit)
     {
         // Input
 
@@ -579,53 +383,18 @@ int main(int argc, char* args[])
         glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+
+        
         texShader.use();
         glBindTexture(GL_TEXTURE_2D, upscalefb.tex);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-
-        // Events
-        event_handling();
-
-        // Swap buffers
-        SDL_GL_SwapWindow(gWindow);
+        glhelp.loopEnd();
     }
     
-    close();
+    glhelp.close();
 
     return 0;
-}
-
-void createFrameBuffer(fb_help &fb)
-{
-    glGenFramebuffers(1, &(fb.fbo));
-    glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
-
-    glGenTextures(1, &(fb.tex));
-    glBindTexture(GL_TEXTURE_2D, fb.tex);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, RENDER_WIDTH, RENDER_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fb.tex, 0);
-
-    glGenRenderbuffers(1, &(fb.rbo));
-    glBindRenderbuffer(GL_RENDERBUFFER, fb.rbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, RENDER_WIDTH, RENDER_HEIGHT);
-    glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, fb.rbo);
-
-    if(glCheckFramebufferStatus(GL_FRAMEBUFFER == GL_FRAMEBUFFER_COMPLETE))
-    {
-        std::cout << "Framebuffer is complete!!!" << std::endl;
-    }
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    return;
 }
 
 void load_three_spheres(material_list materials, hittable_list objects, unsigned int matUBO, unsigned int sphereUBO) {

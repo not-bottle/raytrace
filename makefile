@@ -1,6 +1,6 @@
 CXX = g++
 
-FILE = raytrace
+FILE = test
 OTHERS = src/glad.c
 
 LDFLAGS = -lSDL2 -lGL -lX11 -lpthread -lXrandr -lXi -ldl

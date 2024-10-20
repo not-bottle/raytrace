@@ -95,7 +95,7 @@ class randgen {
         for (int i = 0;i < amount; i++) {
             v[i].v = randvec3();
             v[i].pad = 0;
-            std::cout << v[i].v << std::endl;
+            //std::cout << v[i].v << std::endl;
         }
         // v[0].v = colour(0.5, 0.7, 1.0);
         // v[2010].v = colour(0.5, 0.7, 1.0);

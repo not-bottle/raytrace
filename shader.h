@@ -100,6 +100,12 @@ public:
     {
         glUseProgram(ID);
     }
+
+    void bindUBO(UBO ubo, std::string name)
+    {
+        int block_index = glGetUniformBlockIndex(ID, name.c_str());
+        glUniformBlockBinding(ID, block_index, ubo.binding_point);
+    }
     
     // utility uniform functions
     void setBool(const std::string &name, bool value) const
