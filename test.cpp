@@ -60,8 +60,11 @@ int main(int argc, char* args[]) {
 
     UBO ubo = UBO((sizeof(checkersa) + sizeof(checkersb)) * 2);
     // Note: This method I still have to worry about padding. Try to recreate the class so I don't.
-    ubo.sub(&checkersa, sizeof(checkersa), 0);
-    ubo.sub(&checkersb, sizeof(checkersb), 0);
+    ubo.subVec3(checkersa, 0);
+    ubo.subVec3(checkersb, 16);
+
+    ubo.bind(0, 0, -1);
+    checkerShader.bindUBO(ubo, "checker_colours");
 
     // Framebuffer testing (upscale)
     colour clearColour = colour(0.3f, 0.1f, 0.3f);

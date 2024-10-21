@@ -5,9 +5,14 @@ out vec4 FragColour;
 uniform float width;
 uniform float height;
 
+layout (std140) uniform checker_colours
+{
+  vec3[2] colours;
+};
+
 void main() {
-    vec4 checker_a = vec4(0.3f, 1.0f, 0.7f, 1.0f);
-    vec4 checker_b = vec4(1.0f, 0.3f, 0.7f, 1.0f);
+    vec4 checker_a = vec4(colours[0], 0.0f);
+    vec4 checker_b = vec4(colours[1], 0.0f);
 
     float xmodulus = width/10;
     float ymodulus = height/10;
