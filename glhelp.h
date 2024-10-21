@@ -146,6 +146,11 @@ class Context {
         }
     }
 
+    void bind() {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, screenWidth, screenHeight);
+    }
+
     bool isQuit() { return quit; }
 
     void clearBuffer(colour c) {
