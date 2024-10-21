@@ -264,8 +264,8 @@ class FrameBuffer {
         glGenTextures(1, &tex);
         glBindTexture(GL_TEXTURE_2D, tex);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glBindTexture(GL_TEXTURE_2D, 0);
 
         // Attach texture to framebuffer
@@ -332,12 +332,13 @@ class UBO {
       shaders to bind to the same binding point (note, this operation is unrelated to the
       UBO until glBindBufferRange is called to bind it to that binding point.)
     - I'll bind the block index of the shader to the binding points in the shader helper code. */
-    void bind(unsigned int binding_point, int min, int max)
+    void bind(unsigned int my_binding_point, int min, int max)
     {
     if (max == -1) {
         min = 0;
         max = size;
     }
+    binding_point = my_binding_point;
     glBindBufferRange(GL_UNIFORM_BUFFER, binding_point, id, min, max);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
     }

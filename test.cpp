@@ -44,7 +44,7 @@ int main(int argc, char* args[]) {
     vbos[1].offset = (void*)(3*sizeof(float));
 
     vao.bindVBO(vertices, sizeof(vertices), vbos, sizeof(vbos) / sizeof(VBOSetup));
-    vao.bindEBO(indices, sizeof(indices), sizeof(indices) / sizeof(int));
+    vao.bindEBO(indices, sizeof(indices), sizeof(indices) / sizeof(unsigned int));
 
     // Shaders
     Shader checkerShader = Shader("shaders/basic.vs", "shaders/checker.fs");
@@ -56,7 +56,7 @@ int main(int argc, char* args[]) {
 
     // UBO testing
     colour checkersa = colour(1.0f, 1.0f, 1.0f);
-    colour checkersb = colour(0.0f, 0.0f, 0.0f);
+    colour checkersb = colour(0.3f, 0.4f, 0.5f);
 
     UBO ubo = UBO((sizeof(checkersa) + sizeof(checkersb)) * 2);
     // Note: This method I still have to worry about padding. Try to recreate the class so I don't.

@@ -136,8 +136,6 @@ vec3 random_unit_disk(inout xorshift32_state state);
 
 void main()
 {
-  if (gl_FragCoord.x >= X_MIN && gl_FragCoord.x < X_MAX && gl_FragCoord.y >= Y_MIN && gl_FragCoord.y < Y_MAX) {
-
   vec4 tex = texture(screenTexture, TexCoords);
 
   rand_state state;
@@ -178,9 +176,6 @@ void main()
   float gamma = 2.2;
 
   FragColour.rgb = pow(FragColour.rgb, vec3(1.0/gamma));
-  } else {
-    FragColour = vec4(1.0, 0.7, 0.5, 0.0f);
-  }
 }
 
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig)

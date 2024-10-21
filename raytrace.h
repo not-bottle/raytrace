@@ -43,7 +43,7 @@ class Camera {
     vec3 defocus_disk_v;
     };
 
-    void cameraSetup(orientation uvw, int renderWidth, int renderHeight) 
+    void cameraSetup(orientation &uvw) 
     {
     // Raytracing setup
     vec3 u, v, w;
