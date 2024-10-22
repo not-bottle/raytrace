@@ -181,22 +181,7 @@ int main(int argc, char* args[])
     renderfb.bindTexture(1);
     c.clearBuffer(clearcolour);
 
-    float chunk_size = 50.0f;
-    float x_passes = cam.renderWidth / chunk_size;
-    float y_passes = cam.renderHeight / chunk_size;
-
-    float xmin, xmax, ymin, ymax;
-
-    xmin = 0.0f;
-    xmax = xmin + chunk_size;
-    ymin = 0.0f;
-    ymax = ymin + chunk_size;
-
     // Shader uniforms
-    ourShader.setFloat("X_MIN", xmin);
-    ourShader.setFloat("X_MAX", xmax);
-    ourShader.setFloat("Y_MIN", ymin);
-    ourShader.setFloat("Y_MAX", ymax);
 
     uint32_t timeValue = SDL_GetTicks();
     ourShader.setUint("time_u32t", timeValue);
@@ -215,121 +200,39 @@ int main(int argc, char* args[])
 
     ourShader.setInt("num_spheres", objects.num);
 
-    vao.draw();
+    float chunk_size = 50.0f;
+    float x_passes = cam.renderWidth / chunk_size;
+    float y_passes = cam.renderHeight / chunk_size;
 
-    // Second Pass
+    float xmin, xmax, ymin, ymax;
 
-    xmin = xmax;
-    xmax = xmin + chunk_size;
-    ymin = ymax;
-    ymax = ymin + chunk_size;
+    xmin = 0.0f;
+    xmax = 0.0f;
+    ymin = 0.0f;
+    ymax = 0.0f;
 
-    // Shader uniforms
-    ourShader.setFloat("X_MIN", xmin);
-    ourShader.setFloat("X_MAX", xmax);
-    ourShader.setFloat("Y_MIN", ymin);
-    ourShader.setFloat("Y_MAX", ymax);
+    for (int j=0; j < y_passes; j++)
+    {
+        ymin = ymax;
+        ymax = ymin + chunk_size;
 
-    vao.draw();
-    c.loopEnd();
+        ourShader.setFloat("Y_MIN", ymin);
+        ourShader.setFloat("Y_MAX", ymax);
 
-    xmin = xmax;
-    xmax = xmin + chunk_size;
-    ymin = ymax;
-    ymax = ymin + chunk_size;
+        for (int i=0; i < x_passes; i++) 
+        {
+            xmin = xmax;
+            xmax = xmin + chunk_size;
+            ourShader.setFloat("X_MIN", xmin);
+            ourShader.setFloat("X_MAX", xmax);
 
-    // Shader uniforms
-    ourShader.setFloat("X_MIN", xmin);
-    ourShader.setFloat("X_MAX", xmax);
-    ourShader.setFloat("Y_MIN", ymin);
-    ourShader.setFloat("Y_MAX", ymax);
+            vao.draw();
+            c.loopEnd();
+        }
 
-    vao.draw();
-    c.loopEnd();
-
-    xmin = xmax;
-    xmax = xmin + chunk_size;
-    ymin = ymax;
-    ymax = ymin + chunk_size;
-
-    // Shader uniforms
-    ourShader.setFloat("X_MIN", xmin);
-    ourShader.setFloat("X_MAX", xmax);
-    ourShader.setFloat("Y_MIN", ymin);
-    ourShader.setFloat("Y_MAX", ymax);
-
-    vao.draw();
-    c.loopEnd();
-
-    xmin = xmax;
-    xmax = xmin + chunk_size;
-    ymin = ymax;
-    ymax = ymin + chunk_size;
-
-    // Shader uniforms
-    ourShader.setFloat("X_MIN", xmin);
-    ourShader.setFloat("X_MAX", xmax);
-    ourShader.setFloat("Y_MIN", ymin);
-    ourShader.setFloat("Y_MAX", ymax);
-
-    vao.draw();
-    c.loopEnd();
-
-    xmin = xmax;
-    xmax = xmin + chunk_size;
-    ymin = ymax;
-    ymax = ymin + chunk_size;
-
-    // Shader uniforms
-    ourShader.setFloat("X_MIN", xmin);
-    ourShader.setFloat("X_MAX", xmax);
-    ourShader.setFloat("Y_MIN", ymin);
-    ourShader.setFloat("Y_MAX", ymax);
-
-    vao.draw();
-    c.loopEnd();
-
-    xmin = xmax;
-    xmax = xmin + chunk_size;
-    ymin = ymax;
-    ymax = ymin + chunk_size;
-
-    // Shader uniforms
-    ourShader.setFloat("X_MIN", xmin);
-    ourShader.setFloat("X_MAX", xmax);
-    ourShader.setFloat("Y_MIN", ymin);
-    ourShader.setFloat("Y_MAX", ymax);
-
-    vao.draw();
-    c.loopEnd();
-
-    xmin = xmax;
-    xmax = xmin + chunk_size;
-    ymin = ymax;
-    ymax = ymin + chunk_size;
-
-    // Shader uniforms
-    ourShader.setFloat("X_MIN", xmin);
-    ourShader.setFloat("X_MAX", xmax);
-    ourShader.setFloat("Y_MIN", ymin);
-    ourShader.setFloat("Y_MAX", ymax);
-
-    vao.draw();
-    c.loopEnd();
-
-    xmin = xmax;
-    xmax = xmin + chunk_size;
-    ymin = ymax;
-    ymax = ymin + chunk_size;
-
-    // Shader uniforms
-    ourShader.setFloat("X_MIN", xmin);
-    ourShader.setFloat("X_MAX", xmax);
-    ourShader.setFloat("Y_MIN", ymin);
-    ourShader.setFloat("Y_MAX", ymax);
-
-    vao.draw();
-    c.loopEnd();
+        xmin = 0.0f;
+        xmax = 0.0f;
+    }
 
     while (!c.isQuit())
     {
