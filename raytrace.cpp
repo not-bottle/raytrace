@@ -159,7 +159,7 @@ int main(int argc, char* args[])
 
     load_final_scene(materials, objects, matUBO, sphereUBO);
 
-    colour clearcolour = colour(0.0f, 1.0f, 0.0f);
+    colour clearcolour = colour(0.2f, 0.3f, 0.3f);
     // NOISEGEN PASS:
 
     noisegenfb.bind();
@@ -175,10 +175,11 @@ int main(int argc, char* args[])
     renderfb.bind();
     ourShader.use();
     ourShader.bindTex(0, "randTexture");
-    //ourShader.bindTex(1, "screenTexture");
+    ourShader.bindTex(1, "screenTexture");
 
     noisegenfb.bindTexture(0);
-    //renderfb.bindTexture(1);
+    renderfb.bindTexture(1);
+    c.clearBuffer(clearcolour);
 
     float chunk_size = 50.0f;
     float x_passes = cam.renderWidth / chunk_size;
@@ -216,15 +217,7 @@ int main(int argc, char* args[])
 
     vao.draw();
 
-    /*
-
-    renderfb.bind();
-    noisegenfb.bindTexture(0);
-    renderfb.bindTexture(1);
-
-    ourShader.use();
-    ourShader.bindTex(0, "randTexture");
-    ourShader.bindTex(0, "screenTexture");
+    // Second Pass
 
     xmin = xmax;
     xmax = xmin + chunk_size;
@@ -237,25 +230,106 @@ int main(int argc, char* args[])
     ourShader.setFloat("Y_MIN", ymin);
     ourShader.setFloat("Y_MAX", ymax);
 
-    timeValue = SDL_GetTicks();
-    ourShader.setUint("time_u32t", timeValue);
+    vao.draw();
+    c.loopEnd();
 
-    ourShader.setInt("num_samples", NUM_SAMPLES);
-    ourShader.setUint("bounce_limit", BOUNCE_LIMIT);
+    xmin = xmax;
+    xmax = xmin + chunk_size;
+    ymin = ymax;
+    ymax = ymin + chunk_size;
 
-    ourShader.setVec3("delta_u", uvw.delta_u);
-    ourShader.setVec3("delta_v", uvw.delta_v);
-    ourShader.setVec3("camera_origin", uvw.lookfrom);
-    ourShader.setVec3("viewport_top_left", uvw.viewport_top_left);
-
-    ourShader.setFloat("defocus_angle", uvw.defocus_angle);
-    ourShader.setVec3("defocus_disk_u", uvw.defocus_disk_u);
-    ourShader.setVec3("defocus_disk_v", uvw.defocus_disk_v);
-
-    ourShader.setInt("num_spheres", objects.num);
+    // Shader uniforms
+    ourShader.setFloat("X_MIN", xmin);
+    ourShader.setFloat("X_MAX", xmax);
+    ourShader.setFloat("Y_MIN", ymin);
+    ourShader.setFloat("Y_MAX", ymax);
 
     vao.draw();
-    */
+    c.loopEnd();
+
+    xmin = xmax;
+    xmax = xmin + chunk_size;
+    ymin = ymax;
+    ymax = ymin + chunk_size;
+
+    // Shader uniforms
+    ourShader.setFloat("X_MIN", xmin);
+    ourShader.setFloat("X_MAX", xmax);
+    ourShader.setFloat("Y_MIN", ymin);
+    ourShader.setFloat("Y_MAX", ymax);
+
+    vao.draw();
+    c.loopEnd();
+
+    xmin = xmax;
+    xmax = xmin + chunk_size;
+    ymin = ymax;
+    ymax = ymin + chunk_size;
+
+    // Shader uniforms
+    ourShader.setFloat("X_MIN", xmin);
+    ourShader.setFloat("X_MAX", xmax);
+    ourShader.setFloat("Y_MIN", ymin);
+    ourShader.setFloat("Y_MAX", ymax);
+
+    vao.draw();
+    c.loopEnd();
+
+    xmin = xmax;
+    xmax = xmin + chunk_size;
+    ymin = ymax;
+    ymax = ymin + chunk_size;
+
+    // Shader uniforms
+    ourShader.setFloat("X_MIN", xmin);
+    ourShader.setFloat("X_MAX", xmax);
+    ourShader.setFloat("Y_MIN", ymin);
+    ourShader.setFloat("Y_MAX", ymax);
+
+    vao.draw();
+    c.loopEnd();
+
+    xmin = xmax;
+    xmax = xmin + chunk_size;
+    ymin = ymax;
+    ymax = ymin + chunk_size;
+
+    // Shader uniforms
+    ourShader.setFloat("X_MIN", xmin);
+    ourShader.setFloat("X_MAX", xmax);
+    ourShader.setFloat("Y_MIN", ymin);
+    ourShader.setFloat("Y_MAX", ymax);
+
+    vao.draw();
+    c.loopEnd();
+
+    xmin = xmax;
+    xmax = xmin + chunk_size;
+    ymin = ymax;
+    ymax = ymin + chunk_size;
+
+    // Shader uniforms
+    ourShader.setFloat("X_MIN", xmin);
+    ourShader.setFloat("X_MAX", xmax);
+    ourShader.setFloat("Y_MIN", ymin);
+    ourShader.setFloat("Y_MAX", ymax);
+
+    vao.draw();
+    c.loopEnd();
+
+    xmin = xmax;
+    xmax = xmin + chunk_size;
+    ymin = ymax;
+    ymax = ymin + chunk_size;
+
+    // Shader uniforms
+    ourShader.setFloat("X_MIN", xmin);
+    ourShader.setFloat("X_MAX", xmax);
+    ourShader.setFloat("Y_MIN", ymin);
+    ourShader.setFloat("Y_MAX", ymax);
+
+    vao.draw();
+    c.loopEnd();
 
     while (!c.isQuit())
     {
@@ -268,6 +342,7 @@ int main(int argc, char* args[])
         
         vao.draw();
 
+        c.event_handling();
         c.loopEnd();
     }
     

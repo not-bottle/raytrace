@@ -111,7 +111,6 @@ public:
     {
         glUseProgram(ID);
         glUniform1i(glGetUniformLocation(ID, name.c_str()), textureUnit);
-        glUseProgram(0);
     }
     
     // utility uniform functions

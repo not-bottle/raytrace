@@ -186,7 +186,7 @@ void main()
 
   FragColour.rgb = pow(FragColour.rgb, vec3(1.0/gamma));
   } else {
-    FragColour = vec4(1.0f, 0.7f, 0.5f, 1.0f);
+    FragColour = screentex;
   }
 }
 

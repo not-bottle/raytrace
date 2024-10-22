@@ -159,7 +159,6 @@ class Context {
     }
 
     void loopEnd() {
-        event_handling();
         SDL_GL_SwapWindow(glWindow);
     }
 };
