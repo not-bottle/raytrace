@@ -19,8 +19,8 @@
 #include "material_list.h"
 #include "material.h"
 
-void load_three_spheres(material_list &materials, hittable_list &objects, unsigned int matUBO, unsigned int sphereUBO);
-void load_final_scene(material_list &materials, hittable_list &objects, unsigned int matUBO, unsigned int sphereUBO);
+void load_three_spheres(material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO);
+void load_final_scene(material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO);
 
 float vertices[] = {
     // positions         // texture coords
@@ -35,11 +35,11 @@ unsigned int indices[] = {
     1, 2, 3
 };
 
-int SCREEN_WIDTH = 1200;
-int RENDER_WIDTH = 1200;
+int SCREEN_WIDTH = 1600;
+int RENDER_WIDTH = 800;
 float ASPECT_RATIO = 16.0/9.0;
 
-int NUM_SAMPLES = 128;
+int NUM_SAMPLES = 8;
 uint32_t BOUNCE_LIMIT = 50;
 
 // Other constants
@@ -145,21 +145,21 @@ int main(int argc, char* args[])
 
     Camera::orientation uvw;
 
-    uvw.lookfrom = point3(0, 0, 0);
-    uvw.lookat = point3(0, 0, -1);
+    uvw.lookfrom = point3(13, 2, 3);
+    uvw.lookat = point3(0, 0, 0);
     uvw.vup = vec3(0, 1, 0);
-    uvw.vfov = 90.0;
-    uvw.defocus_angle = 0;
-    uvw.focus_dist = 1;
+    uvw.vfov = 20.0;
+    uvw.defocus_angle = 0.6;
+    uvw.focus_dist = 10;
 
     cam.cameraSetup(uvw);
 
     material_list materials = material_list();
     hittable_list objects = hittable_list();
 
-    load_three_spheres(materials, objects, matUBO.id, sphereUBO.id);
+    load_final_scene(materials, objects, matUBO, sphereUBO);
 
-    colour clearcolour = colour(0.2f, 0.3f, 0.3f);
+    colour clearcolour = colour(0.0f, 1.0f, 0.0f);
     // NOISEGEN PASS:
 
     noisegenfb.bind();
@@ -173,27 +173,29 @@ int main(int argc, char* args[])
     // UPSCALE PASS:
 
     renderfb.bind();
-    noisegenfb.bindTexture();
-
-    c.clearBuffer(clearcolour);
     ourShader.use();
+    ourShader.bindTex(0, "randTexture");
+    //ourShader.bindTex(1, "screenTexture");
 
-    /*
+    noisegenfb.bindTexture(0);
+    //renderfb.bindTexture(1);
+
     float chunk_size = 50.0f;
-    float x_passes = RENDER_HEIGHT / chunk_size;
-    float y_passes = RENDER_WIDTH / chunk_size;
+    float x_passes = cam.renderWidth / chunk_size;
+    float y_passes = cam.renderHeight / chunk_size;
 
     float xmin, xmax, ymin, ymax;
 
     xmin = 0.0f;
     xmax = xmin + chunk_size;
+    ymin = 0.0f;
+    ymax = ymin + chunk_size;
 
     // Shader uniforms
     ourShader.setFloat("X_MIN", xmin);
     ourShader.setFloat("X_MAX", xmax);
     ourShader.setFloat("Y_MIN", ymin);
     ourShader.setFloat("Y_MAX", ymax);
-    */
 
     uint32_t timeValue = SDL_GetTicks();
     ourShader.setUint("time_u32t", timeValue);
@@ -214,11 +216,53 @@ int main(int argc, char* args[])
 
     vao.draw();
 
+    /*
+
+    renderfb.bind();
+    noisegenfb.bindTexture(0);
+    renderfb.bindTexture(1);
+
+    ourShader.use();
+    ourShader.bindTex(0, "randTexture");
+    ourShader.bindTex(0, "screenTexture");
+
+    xmin = xmax;
+    xmax = xmin + chunk_size;
+    ymin = ymax;
+    ymax = ymin + chunk_size;
+
+    // Shader uniforms
+    ourShader.setFloat("X_MIN", xmin);
+    ourShader.setFloat("X_MAX", xmax);
+    ourShader.setFloat("Y_MIN", ymin);
+    ourShader.setFloat("Y_MAX", ymax);
+
+    timeValue = SDL_GetTicks();
+    ourShader.setUint("time_u32t", timeValue);
+
+    ourShader.setInt("num_samples", NUM_SAMPLES);
+    ourShader.setUint("bounce_limit", BOUNCE_LIMIT);
+
+    ourShader.setVec3("delta_u", uvw.delta_u);
+    ourShader.setVec3("delta_v", uvw.delta_v);
+    ourShader.setVec3("camera_origin", uvw.lookfrom);
+    ourShader.setVec3("viewport_top_left", uvw.viewport_top_left);
+
+    ourShader.setFloat("defocus_angle", uvw.defocus_angle);
+    ourShader.setVec3("defocus_disk_u", uvw.defocus_disk_u);
+    ourShader.setVec3("defocus_disk_v", uvw.defocus_disk_v);
+
+    ourShader.setInt("num_spheres", objects.num);
+
+    vao.draw();
+    */
+
     while (!c.isQuit())
     {
         c.bind();
-        renderfb.bindTexture();
         texShader.use();
+        texShader.bindTex(0, "screenTexture");
+        renderfb.bindTexture(0);
 
         c.clearBuffer(clearcolour);
         
@@ -232,7 +276,7 @@ int main(int argc, char* args[])
     return 0;
 }
 
-void load_three_spheres(material_list &materials, hittable_list &objects, unsigned int matUBO, unsigned int sphereUBO) {
+void load_three_spheres(material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO) {
     // Add Materials
 
     lambertian mat_ground = lambertian(vec3(0.8, 0.8, 0.0));
@@ -268,7 +312,7 @@ void load_three_spheres(material_list &materials, hittable_list &objects, unsign
     objects.add(sphereUBO, right);
 }
 
-void load_final_scene(material_list &materials, hittable_list &objects, unsigned int matUBO, unsigned int sphereUBO) {
+void load_final_scene(material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO) {
     lambertian ground_material = lambertian(colour(0.5, 0.5, 0.5));
     sphere ground = sphere(1000, point3(0, -1000, 0), &ground_material);
     materials.add(matUBO, ground_material);

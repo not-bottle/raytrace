@@ -5,6 +5,7 @@
 #include <SDL2/SDL.h>
 
 #include "vec3.h"
+#include "glhelp.h"
 
 enum MATERIAL_TYPE {
   NOTHING,
@@ -26,20 +27,20 @@ class material {
     material(int my_type, float my_param) : type{my_type}, param1{my_param} {};
     material(int my_type, vec3 my_albedo, float my_param) : type{my_type}, albedo{my_albedo}, param1{my_param} {};
 
-    void add(unsigned int glBuffer, int offset) {
-        glBindBuffer(GL_UNIFORM_BUFFER, glBuffer);
+    void add(UBO ubo, int offset) {
+        glBindBuffer(GL_UNIFORM_BUFFER, ubo.id);
         glBufferSubData(GL_UNIFORM_BUFFER, offset, sizeof(int), &id);
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-        glBindBuffer(GL_UNIFORM_BUFFER, glBuffer);
+        glBindBuffer(GL_UNIFORM_BUFFER, ubo.id);
         glBufferSubData(GL_UNIFORM_BUFFER, offset + 4, sizeof(int), &type);
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-        glBindBuffer(GL_UNIFORM_BUFFER, glBuffer);
+        glBindBuffer(GL_UNIFORM_BUFFER, ubo.id);
         glBufferSubData(GL_UNIFORM_BUFFER, offset + 8, sizeof(float), &param1);
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-        glBindBuffer(GL_UNIFORM_BUFFER, glBuffer);
+        glBindBuffer(GL_UNIFORM_BUFFER, ubo.id);
         glBufferSubData(GL_UNIFORM_BUFFER, offset + 16, sizeof(float) * 3, &albedo);
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
         return;

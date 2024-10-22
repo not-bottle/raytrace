@@ -2,6 +2,7 @@
 #define HITTABLE_H
 
 #include <iostream>
+#include "glhelp.h"
 
 class hittable
 {
@@ -11,7 +12,7 @@ class hittable
     hittable() : size{0} {};
     hittable(int my_size) : size{my_size} {};
 
-    virtual void add(unsigned int glBuffer, int offset) const = 0;
+    virtual void add(UBO ubo, int offset) const = 0;
 };
 
 #endif

@@ -2,6 +2,7 @@
 #define MATERIAL_LIST_H
 
 #include "material.h"
+#include "glhelp.h"
 
 class material_list
 {   
@@ -12,7 +13,7 @@ class material_list
 
     material_list() : num{0}, offset{0} {};
 
-    void add(unsigned int ubo, material &m)
+    void add(UBO ubo, material &m)
     {
         m.id = num; // Set material id sequentially (as they are added)
         m.add(ubo, offset);

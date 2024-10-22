@@ -47,14 +47,14 @@ int main(int argc, char* args[]) {
     vao.bindEBO(indices, sizeof(indices), sizeof(indices) / sizeof(unsigned int));
 
     // Shaders
-    Shader checkerShader = Shader("shaders/basic.vs", "shaders/checker.fs");
+    Shader twopassShader = Shader("shaders/texVertex.vs", "shaders/twopassFragment.fs");
     Shader textureShader = Shader("shaders/texVertex.vs", "shaders/texFragment.fs");
     
-    checkerShader.use();
-    checkerShader.setFloat("width", cam.renderWidth);
-    checkerShader.setFloat("height", cam.renderHeight);
+    twopassShader.use();
+    twopassShader.setFloat("width", cam.renderWidth);
 
     // UBO testing
+    /*
     colour checkersa = colour(1.0f, 1.0f, 1.0f);
     colour checkersb = colour(0.3f, 0.4f, 0.5f);
 
@@ -64,22 +64,31 @@ int main(int argc, char* args[]) {
     ubo.subVec3(checkersb, 16);
 
     ubo.bind(0, 0, -1);
-    checkerShader.bindUBO(ubo, "checker_colours");
+    twopassShader.bindUBO(ubo, "checker_colours");
+    */
 
-    // Framebuffer testing (upscale)
+    // Two pass framebuffer testing
+    // First pass:
     colour clearColour = colour(0.3f, 0.1f, 0.3f);
 
     FrameBuffer fb = FrameBuffer(cam.renderWidth, cam.renderHeight);
     fb.bind();
-    checkerShader.use();
+    fb.bindTexture(0);
+    twopassShader.use();
+    twopassShader.setBool("s", true);
 
     c.clearBuffer(clearColour);
+    vao.draw();
+
+    // Second pass:
+    twopassShader.setBool("s", false);
+
     vao.draw();
 
     while(!c.isQuit()) {
         c.bind();
 
-        fb.bindTexture();
+        fb.bindTexture(0);
         textureShader.use();
 
         c.clearBuffer(clearColour);

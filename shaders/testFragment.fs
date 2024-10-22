@@ -3,6 +3,7 @@
 layout(pixel_center_integer, origin_upper_left) in vec4 gl_FragCoord;
 
 in vec2 TexCoords;
+uniform sampler2D randTexture;
 uniform sampler2D screenTexture;
 
 uniform float X_MIN;
@@ -136,13 +137,21 @@ vec3 random_unit_disk(inout xorshift32_state state);
 
 void main()
 {
-  vec4 tex = texture(screenTexture, TexCoords);
+  vec4 randtex   = texture(randTexture, TexCoords);
+  vec4 screentex = texture(screenTexture, TexCoords);
+
+  if (gl_FragCoord.x < X_MAX && gl_FragCoord.x >= X_MIN && gl_FragCoord.y < Y_MAX && gl_FragCoord.y >= Y_MIN)
+  {
 
   rand_state state;
   cyclestate cs;
 
-  cs.idx = int(mod(floatBitsToInt(tex.x), 2011));
-  cs.offset = 7;
+  cs.idx = int(mod(floatBitsToInt(randtex.x), 2011));
+  cs.offset = int(mod(floatBitsToInt(randtex.x), 2011));
+  if (cs.offset == 0)
+  {
+    cs.offset = 7;
+  }
 
   state.s = cs;
 
@@ -176,6 +185,9 @@ void main()
   float gamma = 2.2;
 
   FragColour.rgb = pow(FragColour.rgb, vec3(1.0/gamma));
+  } else {
+    FragColour = vec4(1.0f, 0.7f, 0.5f, 1.0f);
+  }
 }
 
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig)
@@ -311,7 +323,7 @@ void dialectric(material m, inout hit h, inout ray r, inout rand_state state)
   float sin_theta =  sqrt(1.0 - cos_theta * cos_theta);
   bool cannot_refract = rel_refract_index * sin_theta > 1.0;
 
-  if (cannot_refract || shlick(cos_theta, rel_refract_index) > 1) {
+  if (cannot_refract || shlick(cos_theta, rel_refract_index) > random_float(state)/2.0 + 1.0) {
     r.dir = reflect(unit_dir, unit_normal);
   } else { 
     r.dir = refract(unit_dir, unit_normal, rel_refract_index);

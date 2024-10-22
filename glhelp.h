@@ -302,8 +302,10 @@ class FrameBuffer {
         glViewport(0, 0, width, height); 
     }
 
-    void bindTexture() {
+    void bindTexture(unsigned int textureUnit) {
+        glActiveTexture(GL_TEXTURE0 + textureUnit);
         glBindTexture(GL_TEXTURE_2D, tex);
+        glActiveTexture(GL_TEXTURE0);
     }
 
     private:
