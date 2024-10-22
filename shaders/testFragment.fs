@@ -79,14 +79,14 @@ struct sphere
 
 layout (std140) uniform Precomp_1
 {
-  vec3[2048] unit_vectors;
-  vec3[2048] unit_disks;
+  vec3[7919] unit_vectors;
+  vec3[7919] unit_disks;
 };
 
 layout (std140) uniform Precomp_2
 {
-  vec3[2048] rand_squares;
-  vec3[2048] random_vectors;
+  vec3[7919] rand_squares;
+  vec3[7919] random_vectors;
 };
 
 layout (std140) uniform Materials
@@ -146,8 +146,8 @@ void main()
   rand_state state;
   cyclestate cs;
 
-  cs.idx = int(mod(floatBitsToInt(randtex.x), 2011));
-  cs.offset = int(mod(floatBitsToInt(randtex.x), 2011));
+  cs.idx = int(mod(floatBitsToInt(randtex.x), 7919));
+  cs.offset = int(mod(floatBitsToInt(randtex.x), 7919));
   if (cs.offset == 0)
   {
     cs.offset = 7;
@@ -380,7 +380,7 @@ vec3 random_square(inout rand_state s) { return random_square(s.s); }
 float random_float(inout rand_state s) { return random_float(s.s); }
 
 int idxcycle(inout cyclestate cs) {
-  return cs.idx = int(mod(cs.idx + cs.offset, 2011));
+  return cs.idx = int(mod(cs.idx + cs.offset, 7919));
 }
 
 vec3 random_unit_vector(inout cyclestate cs) {

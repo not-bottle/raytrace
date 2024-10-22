@@ -5,28 +5,6 @@
 
 class Camera {
     public:
-
-    // Screen setup values
-    float aspectRatio = 16.0 / 9.0;
-    int screenWidth = 1200;
-    int screenHeight = 1;
-
-    int renderWidth = 1200;
-    int renderHeight = 1;
-
-    Camera(int myScreenWidth, int myRenderWidth, float myAspectRatio)
-            : screenWidth{myScreenWidth}, renderWidth{myRenderWidth}, aspectRatio{myAspectRatio}
-    {
-    screenHeight = int(screenWidth / aspectRatio);
-    screenHeight = (screenHeight < 1) ? 1 : screenHeight;
-
-    renderHeight = int(renderWidth / aspectRatio);
-    renderHeight = (renderHeight < 1) ? 1 : renderHeight;
-
-    std::cout << "renderHeight: " << renderHeight << std::endl;
-    std::cout << "renderWidth: " << renderWidth << std::endl;
-    }
-    
     struct orientation 
     {
     point3 lookfrom = point3(0, 0, 0);
@@ -43,8 +21,33 @@ class Camera {
     vec3 defocus_disk_v;
     };
 
-    void cameraSetup(orientation &uvw) 
+    // Screen setup values
+    float aspectRatio = 16.0 / 9.0;
+    int screenWidth = 1200;
+    int screenHeight = 1;
+
+    int renderWidth = 1200;
+    int renderHeight = 1;
+
+    orientation uvw;
+
+    Camera(int myScreenWidth, int myRenderWidth, float myAspectRatio)
+            : screenWidth{myScreenWidth}, renderWidth{myRenderWidth}, aspectRatio{myAspectRatio}
     {
+    screenHeight = int(screenWidth / aspectRatio);
+    screenHeight = (screenHeight < 1) ? 1 : screenHeight;
+
+    renderHeight = int(renderWidth / aspectRatio);
+    renderHeight = (renderHeight < 1) ? 1 : renderHeight;
+
+    std::cout << "renderHeight: " << renderHeight << std::endl;
+    std::cout << "renderWidth: " << renderWidth << std::endl;
+    }
+
+    void cameraSetup(orientation o) 
+    {
+    uvw = o;
+
     // Raytracing setup
     vec3 u, v, w;
 

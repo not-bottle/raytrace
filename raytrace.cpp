@@ -19,8 +19,10 @@
 #include "material_list.h"
 #include "material.h"
 
-void load_three_spheres(material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO);
-void load_final_scene(material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO);
+#include <unistd.h>
+
+void load_three_spheres(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO);
+void load_final_scene(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO);
 
 float vertices[] = {
     // positions         // texture coords
@@ -35,18 +37,18 @@ unsigned int indices[] = {
     1, 2, 3
 };
 
-int SCREEN_WIDTH = 1600;
-int RENDER_WIDTH = 800;
+int SCREEN_WIDTH = 1920;
+int RENDER_WIDTH = 1920;
 float ASPECT_RATIO = 16.0/9.0;
 
-int NUM_SAMPLES = 8;
+int NUM_SAMPLES = 512;
 uint32_t BOUNCE_LIMIT = 50;
 
 // Other constants
 const int MAX_NUM_OBJECTS = 128;
 const int SPHERE_UBO_SIZE = MAX_NUM_OBJECTS*32;
 
-int RANDOM_ARRAY_SIZE = 2048;
+int RANDOM_ARRAY_SIZE = 8192;
 
 
 int main(int argc, char* args[])
@@ -143,21 +145,10 @@ int main(int argc, char* args[])
 
     // Raytracing camera setup
 
-    Camera::orientation uvw;
-
-    uvw.lookfrom = point3(13, 2, 3);
-    uvw.lookat = point3(0, 0, 0);
-    uvw.vup = vec3(0, 1, 0);
-    uvw.vfov = 20.0;
-    uvw.defocus_angle = 0.6;
-    uvw.focus_dist = 10;
-
-    cam.cameraSetup(uvw);
-
     material_list materials = material_list();
     hittable_list objects = hittable_list();
 
-    load_final_scene(materials, objects, matUBO, sphereUBO);
+    load_three_spheres(cam, materials, objects, matUBO, sphereUBO);
 
     colour clearcolour = colour(0.2f, 0.3f, 0.3f);
     // NOISEGEN PASS:
@@ -189,18 +180,18 @@ int main(int argc, char* args[])
     ourShader.setInt("num_samples", NUM_SAMPLES);
     ourShader.setUint("bounce_limit", BOUNCE_LIMIT);
 
-    ourShader.setVec3("delta_u", uvw.delta_u);
-    ourShader.setVec3("delta_v", uvw.delta_v);
-    ourShader.setVec3("camera_origin", uvw.lookfrom);
-    ourShader.setVec3("viewport_top_left", uvw.viewport_top_left);
+    ourShader.setVec3("delta_u", cam.uvw.delta_u);
+    ourShader.setVec3("delta_v", cam.uvw.delta_v);
+    ourShader.setVec3("camera_origin", cam.uvw.lookfrom);
+    ourShader.setVec3("viewport_top_left", cam.uvw.viewport_top_left);
 
-    ourShader.setFloat("defocus_angle", uvw.defocus_angle);
-    ourShader.setVec3("defocus_disk_u", uvw.defocus_disk_u);
-    ourShader.setVec3("defocus_disk_v", uvw.defocus_disk_v);
+    ourShader.setFloat("defocus_angle", cam.uvw.defocus_angle);
+    ourShader.setVec3("defocus_disk_u", cam.uvw.defocus_disk_u);
+    ourShader.setVec3("defocus_disk_v", cam.uvw.defocus_disk_v);
 
     ourShader.setInt("num_spheres", objects.num);
 
-    float chunk_size = 50.0f;
+    float chunk_size = 25.0f;
     float x_passes = cam.renderWidth / chunk_size;
     float y_passes = cam.renderHeight / chunk_size;
 
@@ -213,6 +204,14 @@ int main(int argc, char* args[])
 
     for (int j=0; j < y_passes; j++)
     {
+        renderfb.bind();
+        ourShader.use();
+        ourShader.bindTex(0, "randTexture");
+        ourShader.bindTex(1, "screenTexture");
+
+        noisegenfb.bindTexture(0);
+        renderfb.bindTexture(1);   
+
         ymin = ymax;
         ymax = ymin + chunk_size;
 
@@ -221,12 +220,34 @@ int main(int argc, char* args[])
 
         for (int i=0; i < x_passes; i++) 
         {
+            if (c.isQuit()) break;  
+
+            renderfb.bind();
+            ourShader.use();
+            ourShader.bindTex(0, "randTexture");
+            ourShader.bindTex(1, "screenTexture");
+
+            noisegenfb.bindTexture(0);
+            renderfb.bindTexture(1);      
+
             xmin = xmax;
             xmax = xmin + chunk_size;
             ourShader.setFloat("X_MIN", xmin);
             ourShader.setFloat("X_MAX", xmax);
 
             vao.draw();
+
+            // Render partially to screen
+            c.bind();
+            texShader.use();
+            texShader.bindTex(0, "screenTexture");
+            renderfb.bindTexture(0);
+
+            c.clearBuffer(clearcolour);
+            
+            vao.draw();
+
+            c.event_handling();
             c.loopEnd();
         }
 
@@ -254,8 +275,19 @@ int main(int argc, char* args[])
     return 0;
 }
 
-void load_three_spheres(material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO) {
+void load_three_spheres(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO) {
     // Add Materials
+
+    Camera::orientation uvw;
+
+    uvw.lookfrom = point3(0, 0, 0);
+    uvw.lookat = point3(0, 0, -1);
+    uvw.vup = vec3(0, 1, 0);
+    uvw.vfov = 90.0;
+    uvw.defocus_angle = 0.0;
+    uvw.focus_dist = 10;
+
+    cam.cameraSetup(uvw);
 
     lambertian mat_ground = lambertian(vec3(0.8, 0.8, 0.0));
     lambertian mat_centre = lambertian(vec3(0.1, 0.2, 0.5));
@@ -263,25 +295,26 @@ void load_three_spheres(material_list &materials, hittable_list &objects, UBO ma
     dialectric mat_left_bubble = dialectric(1.0/1.5);
     metallic mat_right = metallic(vec3(0.8, 0.6, 0.2), 0.0);
 
-    lambertian mat_left2 = lambertian(vec3(1.0, 0.0, 0.0));
-    lambertian mat_right2 = lambertian(vec3(0.0, 0.0, 1.0));
+    metallic mat_right_2 = metallic(vec3(0.8, 0.2, 0.6), 0.0);
+    metallic mat_right_3 = metallic(vec3(0.2, 0.6, 0.8), 0.0);
+    metallic mat_right_4 = metallic(vec3(0.3, 0.5, 0.3), 0.0);
 
     materials.add(matUBO, mat_ground);
     materials.add(matUBO, mat_centre);
     materials.add(matUBO, mat_left);
     materials.add(matUBO, mat_right);
     materials.add(matUBO, mat_left_bubble);
-
-    materials.add(matUBO, mat_left2);
-    materials.add(matUBO, mat_right2);
+    materials.add(matUBO, mat_right_2);
+    materials.add(matUBO, mat_right_3);
+    materials.add(matUBO, mat_right_4);
 
     // Add spheres
 
-    sphere ground = sphere(100.0, vec3(0.0, -100.5, -1.0), &mat_ground);
-    sphere centre = sphere(0.5, vec3(0.0, 0.0, -1.2), &mat_centre);
-    sphere left = sphere(0.5, vec3(-1.0, 0.0, -1.0), &mat_left);
+    sphere ground = sphere(100.0, vec3(0.0, -100.5, -1.0), &mat_right_4);
+    sphere centre = sphere(0.5, vec3(0.0, 0.0, -1.2), &mat_right);
+    sphere left = sphere(0.5, vec3(-1.0, 0.0, -1.0), &mat_right_2);
     sphere left_bubble = sphere(0.4, vec3(-1.0, 0.0, -1.0), &mat_left_bubble);
-    sphere right = sphere(0.5, vec3(1.0, 0.0, -1.0), &mat_right);
+    sphere right = sphere(0.5, vec3(1.0, 0.0, -1.0), &mat_right_3);
 
     objects.add(sphereUBO, ground);
     objects.add(sphereUBO, centre);
@@ -290,7 +323,18 @@ void load_three_spheres(material_list &materials, hittable_list &objects, UBO ma
     objects.add(sphereUBO, right);
 }
 
-void load_final_scene(material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO) {
+void load_final_scene(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO) {
+    Camera::orientation uvw;
+
+    uvw.lookfrom = point3(13, 2, 3);
+    uvw.lookat = point3(0, 0, 0);
+    uvw.vup = vec3(0, 1, 0);
+    uvw.vfov = 20.0;
+    uvw.defocus_angle = 0.6;
+    uvw.focus_dist = 10;
+
+    cam.cameraSetup(uvw);
+
     lambertian ground_material = lambertian(colour(0.5, 0.5, 0.5));
     sphere ground = sphere(1000, point3(0, -1000, 0), &ground_material);
     materials.add(matUBO, ground_material);
@@ -319,13 +363,13 @@ void load_final_scene(material_list &materials, hittable_list &objects, UBO matU
 
             if ((centre - point3(4, 0.2, 0)).length() > 0.9) {
 
-                if (choose_mat < 0.2) {
+                if (choose_mat < 0.8) {
                     auto albedo = colour::random() * colour::random();
                     lambertian sphere_material = lambertian(albedo);
                     materials.add(matUBO, sphere_material);
                     sphere spherex = sphere(0.2, centre, &sphere_material);
                     objects.add(sphereUBO, spherex);
-                } else if (choose_mat < 0.4) {
+                } else if (choose_mat < 0.95) {
                     auto albedo = colour::random(0.5, 1);
                     auto fuzz = random_float(0, 0.5);
                     metallic sphere_material = metallic(albedo, fuzz);
