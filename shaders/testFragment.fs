@@ -101,11 +101,11 @@ layout (std140) uniform Spheres
 
 bool near_zero(vec3 v);
 
-float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig);
-hit hit_any(vec3 ray_orig, vec3 ray_dir);
+float hit_sphere(vec3 origin, float radius, ray r);
+hit hit_any(ray r);
 
 ray bounce(ray r, inout rand_state state);
-vec3 raycast(vec3 ray_orig, vec3 ray_dir, inout rand_state state);
+vec3 raycast(ray r, inout rand_state state);
 
 vec3 shade_sky(vec3 dir, vec3 albedo);
 float shlick(float cosine, float rel_refract_index);
@@ -163,6 +163,8 @@ void main()
   vec3 colour = vec3(0.0f, 0.0f, 0.0f);
   vec3 ray_origin;
 
+  ray r;
+
   for (int i=0;i<num_samples;i++)
   {
     rand_square = random_square(state).xy;
@@ -175,8 +177,14 @@ void main()
       vec3 rand_disk = random_unit_disk(state);
       ray_origin = camera_origin + rand_disk.x * defocus_disk_u + rand_disk.y * defocus_disk_v;
     }
+
+    r.count = 0u;
+    r.origin = ray_origin;
+    r.dir = frag_loc - ray_origin;
+    r.albedo = vec3(1.0f, 1.0f, 1.0f);
+    r.bounce = true;
     
-    colour += raycast(ray_origin, frag_loc - ray_origin, state);
+    colour += raycast(r, state);
   }
   
   colour = colour/num_samples;
@@ -190,15 +198,8 @@ void main()
   }
 }
 
-vec3 raycast(vec3 ray_orig, vec3 ray_dir, inout rand_state state)
+vec3 raycast(ray r, inout rand_state state)
 {
-  ray r;
-  r.count = 0u;
-  r.origin = ray_orig;
-  r.dir = ray_dir;
-  r.albedo = vec3(1.0f, 1.0f, 1.0f);
-  r.bounce = true;
-
   for (uint i=0u; i<bounce_limit; i++)
   {
     r = bounce(r, state);
@@ -208,11 +209,67 @@ vec3 raycast(vec3 ray_orig, vec3 ray_dir, inout rand_state state)
   return r.albedo;
 }
 
-float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig)
+ray bounce(ray r, inout rand_state state)
 {
-  vec3 oc = origin - ray_orig;
-  float a = dot(ray_dir, ray_dir);
-  float h = dot(ray_dir, oc);
+  hit h = hit_any(r);
+
+  if (h.hit)
+  {
+    r.origin = h.point;
+    r.count = r.count + 1u;
+
+    material_shade(h, r, state);
+
+  } else {
+    r.albedo *= shade_sky(r.dir, r.albedo);
+    r.bounce = false;
+  }
+
+  return r;
+}
+
+hit hit_any(ray r)
+{
+  hit h;
+  h.point = vec3(0.0f, 0.0f, 0.0f);
+  h.normal = vec3(0.0f, 0.0f, 0.0f);
+  h.hit = false;
+  h.interior = false;
+  float t = -1.0f;
+  float new_t;
+  sphere s;
+
+  for (int i=0; i<num_spheres; i++)
+  {
+    new_t = hit_sphere(spheres[i].origin, spheres[i].radius, r);
+    
+    if (t < 0 || (new_t < t && new_t > 0.001)) {
+      t = new_t;
+      s = spheres[i];
+    } 
+  }
+
+  if (t > 0.001f)
+  {
+    h.point = r.origin + r.dir*t;
+    h.normal = (h.point - s.origin) / s.radius;
+    if (dot(h.normal, r.dir) >= 0) {
+      h.normal = -h.normal;
+      h.interior = true;
+    }
+    h.mat = s.mat;
+    h.hit = true;
+  }
+
+  return h;
+}
+
+
+float hit_sphere(vec3 origin, float radius, ray r)
+{
+  vec3 oc = origin - r.origin;
+  float a = dot(r.dir, r.dir);
+  float h = dot(r.dir, oc);
   float c = dot(oc, oc) - radius*radius;
 
   float discriminant = h*h - a*c;
@@ -228,61 +285,6 @@ float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig)
   } else {
     return -1.0f;
   }
-}
-
-hit hit_any(vec3 ray_orig, vec3 ray_dir)
-{
-  hit h;
-  h.point = vec3(0.0f, 0.0f, 0.0f);
-  h.normal = vec3(0.0f, 0.0f, 0.0f);
-  h.hit = false;
-  h.interior = false;
-  float t = -1.0f;
-  float new_t;
-  sphere s;
-
-  for (int i=0; i<num_spheres; i++)
-  {
-    new_t = hit_sphere(spheres[i].origin, spheres[i].radius, ray_dir, ray_orig);
-    
-    if (t < 0 || (new_t < t && new_t > 0.001)) {
-      t = new_t;
-      s = spheres[i];
-    } 
-  }
-
-  if (t > 0.001f)
-  {
-    h.point = ray_orig + ray_dir*t;
-    h.normal = (h.point - s.origin) / s.radius;
-    if (dot(h.normal, ray_dir) >= 0) {
-      h.normal = -h.normal;
-      h.interior = true;
-    }
-    h.mat = s.mat;
-    h.hit = true;
-  }
-
-  return h;
-}
-
-ray bounce(ray r, inout rand_state state)
-{
-  hit h = hit_any(r.origin, r.dir);
-
-  if (h.hit)
-  {
-    r.origin = h.point;
-    r.count = r.count + 1u;
-
-    material_shade(h, r, state);
-
-  } else {
-    r.albedo *= shade_sky(r.dir, r.albedo);
-    r.bounce = false;
-  }
-
-  return r;
 }
 
 void material_shade(inout hit h, inout ray r, inout rand_state state)
