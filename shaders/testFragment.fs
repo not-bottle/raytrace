@@ -190,6 +190,24 @@ void main()
   }
 }
 
+vec3 raycast(vec3 ray_orig, vec3 ray_dir, inout rand_state state)
+{
+  ray r;
+  r.count = 0u;
+  r.origin = ray_orig;
+  r.dir = ray_dir;
+  r.albedo = vec3(1.0f, 1.0f, 1.0f);
+  r.bounce = true;
+
+  for (uint i=0u; i<bounce_limit; i++)
+  {
+    r = bounce(r, state);
+    if (!r.bounce) return r.albedo;
+  }
+
+  return r.albedo;
+}
+
 float hit_sphere(vec3 origin, float radius, vec3 ray_dir, vec3 ray_orig)
 {
   vec3 oc = origin - ray_orig;
@@ -331,25 +349,6 @@ void dialectric(material m, inout hit h, inout ray r, inout rand_state state)
 
   r.bounce = true;
   return;
-}
-
-
-vec3 raycast(vec3 ray_orig, vec3 ray_dir, inout rand_state state)
-{
-  ray r;
-  r.count = 0u;
-  r.origin = ray_orig;
-  r.dir = ray_dir;
-  r.albedo = vec3(1.0f, 1.0f, 1.0f);
-  r.bounce = true;
-
-  for (uint i=0u; i<bounce_limit; i++)
-  {
-    r = bounce(r, state);
-    if (!r.bounce) return r.albedo;
-  }
-
-  return r.albedo;
 }
 
 float shlick(float cosine, float rel_refract_index)

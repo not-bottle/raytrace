@@ -148,7 +148,7 @@ int main(int argc, char* args[])
     material_list materials = material_list();
     hittable_list objects = hittable_list();
 
-    load_final_scene(cam, materials, objects, matUBO, sphereUBO);
+    load_three_spheres(cam, materials, objects, matUBO, sphereUBO);
 
     colour clearcolour = colour(0.2f, 0.3f, 0.3f);
     // NOISEGEN PASS:
