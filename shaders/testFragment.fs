@@ -60,6 +60,7 @@ struct ray
   bool bounce;
   uint count;
   vec3 albedo;
+  float time;
 };
 
 struct material
@@ -75,6 +76,7 @@ struct sphere
   int mat;
   float radius;
   vec3 origin;
+  vec3 path;
 };
 
 layout (std140) uniform Precomp_1
@@ -183,6 +185,7 @@ void main()
     r.dir = frag_loc - ray_origin;
     r.albedo = vec3(1.0f, 1.0f, 1.0f);
     r.bounce = true;
+    r.time = random_float(state);
     
     colour += raycast(r, state);
   }
@@ -239,9 +242,12 @@ hit hit_any(ray r)
   float new_t;
   sphere s;
 
+  vec3 origin_in_time;
+
   for (int i=0; i<num_spheres; i++)
   {
-    new_t = hit_sphere(spheres[i].origin, spheres[i].radius, r);
+    origin_in_time = spheres[i].origin + spheres[i].path*r.time;
+    new_t = hit_sphere(origin_in_time, spheres[i].radius, r);
     
     if (t < 0 || (new_t < t && new_t > 0.001)) {
       t = new_t;

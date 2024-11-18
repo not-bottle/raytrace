@@ -38,10 +38,10 @@ unsigned int indices[] = {
 };
 
 int SCREEN_WIDTH = 1600;
-int RENDER_WIDTH = 800;
+int RENDER_WIDTH = 1200;
 float ASPECT_RATIO = 16.0/9.0;
 
-int NUM_SAMPLES = 32;
+int NUM_SAMPLES = 128;
 uint32_t BOUNCE_LIMIT = 50;
 
 // Other constants
@@ -364,10 +364,12 @@ void load_final_scene(Camera &cam, material_list &materials, hittable_list &obje
             if ((centre - point3(4, 0.2, 0)).length() > 0.9) {
 
                 if (choose_mat < 0.8) {
+                    auto centre2 = centre + vec3(0.0, random_float(0, 0.5), 0.0);
+
                     auto albedo = colour::random() * colour::random();
                     lambertian sphere_material = lambertian(albedo);
                     materials.add(matUBO, sphere_material);
-                    sphere spherex = sphere(0.2, centre, &sphere_material);
+                    sphere spherex = sphere(0.2, centre, centre2 - centre, &sphere_material);
                     objects.add(sphereUBO, spherex);
                 } else if (choose_mat < 0.95) {
                     auto albedo = colour::random(0.5, 1);

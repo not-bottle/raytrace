@@ -68,8 +68,6 @@ class randgen {
             v[i].v = random_unit_vector();
             v[i].pad = 0;
         }
-        // v[0].v = colour(0.5, 0.7, 1.0);
-        // v[2010].v = colour(0.5, 0.7, 1.0);
     }  
 
     void gen_unit_disks(vec4 v[], int amount) {
@@ -77,28 +75,20 @@ class randgen {
             v[i].v = random_unit_disk();
             v[i].pad = 0;
         }
-        // v[0].v = colour(0.5, 0.7, 1.0);
-        // v[2010].v = colour(0.5, 0.7, 1.0);
     }
 
     void gen_rand_squares(vec4 v[], int amount) {
         for (int i = 0;i < amount; i++) {
             v[i].v = random_square();
             v[i].pad = 0;
-            //std::cout << v[i].v << std::endl;
         }
-        // v[0].v = colour(0.5, 0.7, 1.0);
-        // v[2010].v = colour(0.5, 0.7, 1.0);
     }
 
     void gen_rand_vectors(vec4 v[], int amount) {
         for (int i = 0;i < amount; i++) {
             v[i].v = randvec3();
             v[i].pad = 0;
-            //std::cout << v[i].v << std::endl;
         }
-        // v[0].v = colour(0.5, 0.7, 1.0);
-        // v[2010].v = colour(0.5, 0.7, 1.0);
     }
 };
 
