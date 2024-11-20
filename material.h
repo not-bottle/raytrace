@@ -28,22 +28,10 @@ class material {
     material(int my_type, vec3 my_albedo, float my_param) : type{my_type}, albedo{my_albedo}, param1{my_param} {};
 
     void toUBO(UBO ubo, int offset) {
-        glBindBuffer(GL_UNIFORM_BUFFER, ubo.id);
-        glBufferSubData(GL_UNIFORM_BUFFER, offset, sizeof(int), &id);
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-        glBindBuffer(GL_UNIFORM_BUFFER, ubo.id);
-        glBufferSubData(GL_UNIFORM_BUFFER, offset + 4, sizeof(int), &type);
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-        glBindBuffer(GL_UNIFORM_BUFFER, ubo.id);
-        glBufferSubData(GL_UNIFORM_BUFFER, offset + 8, sizeof(float), &param1);
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-        glBindBuffer(GL_UNIFORM_BUFFER, ubo.id);
-        glBufferSubData(GL_UNIFORM_BUFFER, offset + 16, sizeof(float) * 3, &albedo);
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
-        return;
+        ubo.sub(&id, sizeof(int), offset);
+        ubo.sub(&type, sizeof(int), offset + 4);
+        ubo.sub(&param1, sizeof(float), offset + 8);
+        ubo.subVec3(albedo, offset + 16);
     }
 };
 

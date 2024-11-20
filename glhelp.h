@@ -351,14 +351,14 @@ class UBO {
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
     }
 
-    void sub(void *data, unsigned int size, int start) 
+    void sub(const void *data, unsigned int size, int start) 
     {
     glBindBuffer(GL_UNIFORM_BUFFER, id);
-    glBufferSubData(GL_UNIFORM_BUFFER, start, size, &data);
+    glBufferSubData(GL_UNIFORM_BUFFER, start, size, data);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
     }
 
-    void subVec3(vec3 &data, int start)
+    void subVec3(const vec3 &data, int start)
     {
     glBindBuffer(GL_UNIFORM_BUFFER, id);
     glBufferSubData(GL_UNIFORM_BUFFER, start, sizeof(float) * 4, &data);

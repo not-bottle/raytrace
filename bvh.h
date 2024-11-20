@@ -68,6 +68,11 @@ class bvh_node : public hittable {
                 queue.push(node->right);
 
                 // Insert body node into UBO
+                // bool       - 4 bytes (blank)
+                // obj_idx    - 4 bytes (blank)
+                // interval-x - 2*4bytes
+                // interval-y - 2*4bytes
+                // interval-z - 2*4bytes
             }
             queue.pop();
         }

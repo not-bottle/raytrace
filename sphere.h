@@ -41,21 +41,10 @@ class sphere : public hittable
     aabb bounding_box() const override { return bbox; }
 
     virtual void toUBO(UBO ubo, int offset) const override {
-        glBindBuffer(GL_UNIFORM_BUFFER, ubo.id);
-        glBufferSubData(GL_UNIFORM_BUFFER, offset, sizeof(int), &(mat->id));
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-        glBindBuffer(GL_UNIFORM_BUFFER, ubo.id);
-        glBufferSubData(GL_UNIFORM_BUFFER, offset + 4, sizeof(float), &radius);
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-        glBindBuffer(GL_UNIFORM_BUFFER, ubo.id);
-        glBufferSubData(GL_UNIFORM_BUFFER, offset + 16, sizeof(float) * 3, &origin);
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-        glBindBuffer(GL_UNIFORM_BUFFER, ubo.id);
-        glBufferSubData(GL_UNIFORM_BUFFER, offset + 32, sizeof(float) * 3, &path);
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+        ubo.sub(&(mat->id), sizeof(int), offset);
+        ubo.sub(&radius, sizeof(int), offset + 4);
+        ubo.subVec3(origin, offset + 16);
+        ubo.subVec3(path, offset + 32);
     }
 };
 
