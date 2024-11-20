@@ -24,10 +24,12 @@ class hittable_list
     void toUBO(UBO ubo)
     {
         size_t offset = 0;
+        int idx = 0;
         for (std::vector<std::shared_ptr<hittable>>::iterator it = objects.begin(); it != objects.end(); it++)
         {
-            (*it)->toUBO(ubo, offset);
+            (*it)->toUBO(ubo, offset, idx);
             offset += (*it)->size;
+            idx += 1;
         }
     }
 

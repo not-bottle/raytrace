@@ -47,33 +47,40 @@ class bvh_node : public hittable {
 
     aabb bounding_box() const override { return bbox; }
 
-    void toUBO(UBO ubo, int offset) const override {
+    void toUBO(UBO ubo, int offset, int idx) override {
         std::queue<std::shared_ptr<bvh_node>> queue;
 
         std::shared_ptr<bvh_node> node = std::make_shared<bvh_node>(*this);
         queue.push(node);
+
+        int offset0 = 0;
+        int obj_idx = 0;
+
         while(!queue.empty()) {
             node = queue.front();
 
             if (node->leaf) {
-                // Insert leaf node into UBO
-                // bool       - 4 bytes 
-                // obj_idx    - 4 bytes
-                // interval-x - 2*4bytes (blank)
-                // interval-y - 2*4bytes (blank)
-                // interval-z - 2*4bytes (blank)
-
+                obj_idx = node->object->id;
             } else {
                 queue.push(node->left);
                 queue.push(node->right);
-
-                // Insert body node into UBO
-                // bool       - 4 bytes (blank)
-                // obj_idx    - 4 bytes (blank)
-                // interval-x - 2*4bytes
-                // interval-y - 2*4bytes
-                // interval-z - 2*4bytes
             }
+
+            // Insert node into UBO
+            // bool       - 4 bytes 
+            // obj_idx    - 4 bytes
+            // interval-x - 2*4bytes (blank)
+            // interval-y - 2*4bytes (blank)
+            // interval-z - 2*4bytes (blank)
+
+            ubo.sub(&leaf, sizeof(bool), offset + offset0);
+            ubo.sub(&obj_idx, sizeof(int), offset + offset0 + 4);
+            ubo.sub(&bbox.x, sizeof(float) * 2, offset + offset0 + 8);
+            ubo.sub(&bbox.y, sizeof(float) * 2, offset + offset0 + 16);
+            ubo.sub(&bbox.z, sizeof(float) * 2, offset + offset0 + 24);
+
+            offset0 += 32;
+
             queue.pop();
         }
     }
