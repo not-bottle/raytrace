@@ -20,6 +20,8 @@
 #include "material_list.h"
 #include "material.h"
 
+#include "bvh.h"
+
 #include <unistd.h>
 
 void load_three_spheres(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO);
@@ -191,7 +193,6 @@ int main(int argc, char* args[])
     ourShader.setVec3("defocus_disk_v", cam.uvw.defocus_disk_v);
 
     ourShader.setInt("num_spheres", objects.objects.size());
-    std::cout << objects.objects.size();
 
     float chunk_size = 25.0f;
     float x_passes = cam.renderWidth / chunk_size;
@@ -318,6 +319,8 @@ void load_three_spheres(Camera &cam, material_list &materials, hittable_list &ob
     objects.add(right);
 
     std::cout << objects.bounding_box();
+    bvh_node bvh = bvh_node(objects);
+    std::cout << bvh.bounding_box();
     objects.toUBO(sphereUBO);
     materials.toUBO(matUBO);
 }
@@ -388,6 +391,8 @@ void load_final_scene(Camera &cam, material_list &materials, hittable_list &obje
     }
 
     std::cout << objects.bounding_box();
+    bvh_node bvh = bvh_node(objects);
+    std::cout << bvh.bounding_box();
     objects.toUBO(sphereUBO);
     materials.toUBO(matUBO);
 }

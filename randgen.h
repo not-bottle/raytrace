@@ -22,9 +22,17 @@ class randgen {
     public:
     randgen() {};
 
+    int randint(int a, int b) {
+        return int(randfloat(a, b+1));
+    }
+
     float randfloat() {
         float r = mt() / UINT32_MAX + 1.0;
         return rd(mt);
+    }
+
+    float randfloat(float min, float max) {
+        return min + randfloat()*(max-min);
     }
 
     vec3 randvec3() {
