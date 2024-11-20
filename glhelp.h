@@ -333,6 +333,13 @@ class UBO {
       shaders to bind to the same binding point (note, this operation is unrelated to the
       UBO until glBindBufferRange is called to bind it to that binding point.)
     - I'll bind the block index of the shader to the binding points in the shader helper code. */
+    void bind(unsigned int my_binding_point)
+    {
+    binding_point = my_binding_point;
+    glBindBufferRange(GL_UNIFORM_BUFFER, binding_point, id, 0, size);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    }
+
     void bind(unsigned int my_binding_point, int min, int max)
     {
     if (max == -1) {
@@ -353,12 +360,6 @@ class UBO {
 
     void subVec3(vec3 &data, int start)
     {
-    float vec4[4];
-    vec4[0] = data[0];
-    vec4[1] = data[1];
-    vec4[2] = data[2];
-    vec4[3] = 0.0f;
-
     glBindBuffer(GL_UNIFORM_BUFFER, id);
     glBufferSubData(GL_UNIFORM_BUFFER, start, sizeof(float) * 4, &data);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);

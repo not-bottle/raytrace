@@ -4,21 +4,32 @@
 #include "material.h"
 #include "glhelp.h"
 
+#include <vector>
+#include <memory>
+
 class material_list
 {   
     public:
-
+    std::vector<std::shared_ptr<material>> materials;
     int num;
-    int offset;
 
-    material_list() : num{0}, offset{0} {};
+    material_list() : num{0} {};
 
-    void add(UBO ubo, material &m)
+    void add(std::shared_ptr<material> &m)
     {
-        m.id = num; // Set material id sequentially (as they are added)
-        m.add(ubo, offset);
-        offset += m.size;
+        m->id = num; // Set material id sequentially (as they are added)
         num += 1;
+        materials.push_back(m);
+    }
+
+    void toUBO(UBO ubo)
+    {
+        size_t offset = 0;
+        for (std::vector<std::shared_ptr<material>>::iterator it = materials.begin(); it != materials.end(); it++)
+        {
+            (*it)->toUBO(ubo, offset);
+            offset += (*it)->size;
+        }
     }
 };
 

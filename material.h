@@ -27,7 +27,7 @@ class material {
     material(int my_type, float my_param) : type{my_type}, param1{my_param} {};
     material(int my_type, vec3 my_albedo, float my_param) : type{my_type}, albedo{my_albedo}, param1{my_param} {};
 
-    void add(UBO ubo, int offset) {
+    void toUBO(UBO ubo, int offset) {
         glBindBuffer(GL_UNIFORM_BUFFER, ubo.id);
         glBufferSubData(GL_UNIFORM_BUFFER, offset, sizeof(int), &id);
         glBindBuffer(GL_UNIFORM_BUFFER, 0);

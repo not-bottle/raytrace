@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <cmath>
 #include <algorithm>
+#include <memory>
 
 #include <glad/glad.h>
 #include <SDL2/SDL.h>
@@ -38,10 +39,10 @@ unsigned int indices[] = {
 };
 
 int SCREEN_WIDTH = 1600;
-int RENDER_WIDTH = 1200;
+int RENDER_WIDTH = 400;
 float ASPECT_RATIO = 16.0/9.0;
 
-int NUM_SAMPLES = 128;
+int NUM_SAMPLES = 32;
 uint32_t BOUNCE_LIMIT = 50;
 
 // Other constants
@@ -148,7 +149,7 @@ int main(int argc, char* args[])
     material_list materials = material_list();
     hittable_list objects = hittable_list();
 
-    load_final_scene(cam, materials, objects, matUBO, sphereUBO);
+    load_three_spheres(cam, materials, objects, matUBO, sphereUBO);
 
     colour clearcolour = colour(0.2f, 0.3f, 0.3f);
     // NOISEGEN PASS:
@@ -189,7 +190,8 @@ int main(int argc, char* args[])
     ourShader.setVec3("defocus_disk_u", cam.uvw.defocus_disk_u);
     ourShader.setVec3("defocus_disk_v", cam.uvw.defocus_disk_v);
 
-    ourShader.setInt("num_spheres", objects.num);
+    ourShader.setInt("num_spheres", objects.objects.size());
+    std::cout << objects.objects.size();
 
     float chunk_size = 25.0f;
     float x_passes = cam.renderWidth / chunk_size;
@@ -289,38 +291,35 @@ void load_three_spheres(Camera &cam, material_list &materials, hittable_list &ob
 
     cam.cameraSetup(uvw);
 
-    lambertian mat_ground = lambertian(vec3(0.8, 0.8, 0.0));
-    lambertian mat_centre = lambertian(vec3(0.1, 0.2, 0.5));
-    dialectric mat_left = dialectric(1.5);
-    dialectric mat_left_bubble = dialectric(1.0/1.5);
-    metallic mat_right = metallic(vec3(0.8, 0.6, 0.2), 0.0);
+    auto mat_ground = std::make_shared<material>(lambertian(vec3(0.8, 0.8, 0.0)));
+    auto mat_centre = std::make_shared<material>(lambertian(vec3(0.1, 0.2, 0.5)));
+    auto mat_left = std::make_shared<material>(dialectric(1.5));
+    auto mat_left_bubble = std::make_shared<material>(dialectric(1.0/1.5));
+    auto mat_right = std::make_shared<material>(metallic(vec3(0.8, 0.6, 0.2), 0.0));
 
-    metallic mat_right_2 = metallic(vec3(0.8, 0.2, 0.6), 0.0);
-    metallic mat_right_3 = metallic(vec3(0.2, 0.6, 0.8), 0.0);
-    metallic mat_right_4 = metallic(vec3(0.3, 0.5, 0.3), 0.0);
-
-    materials.add(matUBO, mat_ground);
-    materials.add(matUBO, mat_centre);
-    materials.add(matUBO, mat_left);
-    materials.add(matUBO, mat_right);
-    materials.add(matUBO, mat_left_bubble);
-    materials.add(matUBO, mat_right_2);
-    materials.add(matUBO, mat_right_3);
-    materials.add(matUBO, mat_right_4);
+    materials.add(mat_ground);
+    materials.add(mat_centre);
+    materials.add(mat_left);
+    materials.add(mat_right);
+    materials.add(mat_left_bubble);
 
     // Add spheres
 
-    sphere ground = sphere(100.0, vec3(0.0, -100.5, -1.0), &mat_right_4);
-    sphere centre = sphere(0.5, vec3(0.0, 0.0, -1.2), &mat_right);
-    sphere left = sphere(0.5, vec3(-1.0, 0.0, -1.0), &mat_right_2);
-    sphere left_bubble = sphere(0.4, vec3(-1.0, 0.0, -1.0), &mat_left_bubble);
-    sphere right = sphere(0.5, vec3(1.0, 0.0, -1.0), &mat_right_3);
+    auto ground = std::make_shared<sphere>(sphere(100.0, vec3(0.0, -100.5, -1.0), mat_ground));
+    auto centre = std::make_shared<sphere>(sphere(0.5, vec3(0.0, 0.0, -1.2), vec3(0.0, 0.0, -0.5), mat_centre));
+    auto left = std::make_shared<sphere>(sphere(0.5, vec3(-1.0, 0.0, -1.0), mat_left));
+    auto left_bubble = std::make_shared<sphere>(sphere(0.4, vec3(-1.0, 0.0, -1.0), mat_left_bubble));
+    auto right = std::make_shared<sphere>(sphere(0.5, vec3(1.0, 0.0, -1.0), mat_right));
 
-    objects.add(sphereUBO, ground);
-    objects.add(sphereUBO, centre);
-    objects.add(sphereUBO, left);
-    objects.add(sphereUBO, left_bubble);
-    objects.add(sphereUBO, right);
+    objects.add(ground);
+    objects.add(centre);
+    objects.add(left);
+    objects.add(left_bubble);
+    objects.add(right);
+
+    std::cout << objects.bounding_box();
+    objects.toUBO(sphereUBO);
+    materials.toUBO(matUBO);
 }
 
 void load_final_scene(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO) {
@@ -335,26 +334,26 @@ void load_final_scene(Camera &cam, material_list &materials, hittable_list &obje
 
     cam.cameraSetup(uvw);
 
-    lambertian ground_material = lambertian(colour(0.5, 0.5, 0.5));
-    sphere ground = sphere(1000, point3(0, -1000, 0), &ground_material);
-    materials.add(matUBO, ground_material);
-    objects.add(sphereUBO, ground);
+    auto ground_material = std::make_shared<material>(lambertian(colour(0.5, 0.5, 0.5)));
+    auto ground = std::make_shared<sphere>(sphere(1000, point3(0, -1000, 0), ground_material));
+    materials.add(ground_material);
+    objects.add(ground);
 
-    dialectric material1 = dialectric(1.5);
-    lambertian material2 = lambertian(colour(0.4, 0.2, 0.1));
-    metallic   material3 = metallic(colour(0.7, 0.6, 0.5), 0.0);
+    auto material1 = std::make_shared<material>(dialectric(1.5));
+    auto material2 = std::make_shared<material>(lambertian(colour(0.4, 0.2, 0.1)));
+    auto material3 = std::make_shared<material>(metallic(colour(0.7, 0.6, 0.5), 0.0));
 
-    materials.add(matUBO, material1);
-    materials.add(matUBO, material2);
-    materials.add(matUBO, material3);
+    materials.add(material1);
+    materials.add(material2);
+    materials.add(material3);
 
-    sphere     sphere1 = sphere(1.0, point3(0, 1, 0), &material1);
-    sphere     sphere2 = sphere(1.0, point3(-4, 1, 0), &material2);
-    sphere     sphere3 = sphere(1.0, point3(4, 1, 0), &material3);
+    auto sphere1 = std::make_shared<sphere>(sphere(1.0, point3(0, 1, 0), material1));
+    auto sphere2 = std::make_shared<sphere>(sphere(1.0, point3(-4, 1, 0), material2));
+    auto sphere3 = std::make_shared<sphere>(sphere(1.0, point3(4, 1, 0), material3));
 
-    objects.add(sphereUBO, sphere1);
-    objects.add(sphereUBO, sphere2);
-    objects.add(sphereUBO, sphere3);
+    objects.add(sphere1);
+    objects.add(sphere2);
+    objects.add(sphere3);
 
     for (int a = -11; a < 11; a++) {
         for (int b = -11; b < 11; b++) {
@@ -364,27 +363,31 @@ void load_final_scene(Camera &cam, material_list &materials, hittable_list &obje
             if ((centre - point3(4, 0.2, 0)).length() > 0.9) {
 
                 if (choose_mat < 0.8) {
-                    auto centre2 = centre + vec3(0.0, random_float(0, 0.5), 0.0);
+                    auto centre2 = centre + vec3(0.0, random_float(0, 0.3), 0.0);
 
                     auto albedo = colour::random() * colour::random();
-                    lambertian sphere_material = lambertian(albedo);
-                    materials.add(matUBO, sphere_material);
-                    sphere spherex = sphere(0.2, centre, centre2 - centre, &sphere_material);
-                    objects.add(sphereUBO, spherex);
+                    auto sphere_material = std::make_shared<material>(lambertian(albedo));
+                    materials.add(sphere_material);
+                    auto spherex = std::make_shared<sphere>(sphere(0.2, centre, centre2 - centre, sphere_material));
+                    objects.add(spherex);
                 } else if (choose_mat < 0.95) {
                     auto albedo = colour::random(0.5, 1);
                     auto fuzz = random_float(0, 0.5);
-                    metallic sphere_material = metallic(albedo, fuzz);
-                    materials.add(matUBO, sphere_material);
-                    sphere spherex = sphere(0.2, centre, &sphere_material);
-                    objects.add(sphereUBO, spherex);
+                    auto sphere_material = std::make_shared<material>(metallic(albedo, fuzz));
+                    materials.add(sphere_material);
+                    auto spherex = std::make_shared<sphere>(sphere(0.2, centre, sphere_material));
+                    objects.add(spherex);
                 } else {
-                    dialectric sphere_material = dialectric(1.5);
-                    materials.add(matUBO, sphere_material);
-                    sphere spherex = sphere(0.2, centre, &sphere_material);
-                    objects.add(sphereUBO, spherex);
+                    auto sphere_material = std::make_shared<material>(dialectric(1.5));
+                    materials.add(sphere_material);
+                    auto spherex = std::make_shared<sphere>(sphere(0.2, centre, sphere_material));
+                    objects.add(spherex);
                 }
             }
         }
     }
+
+    std::cout << objects.bounding_box();
+    objects.toUBO(sphereUBO);
+    materials.toUBO(matUBO);
 }
