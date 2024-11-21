@@ -226,12 +226,12 @@ void main()
 
   ray d;
   d.count = 0u;
-  d.origin = vec3(0.0, 0.0, 0.0);
-  d.dir = vec3(1.0, 1.0, 1.0);
+  d.origin = vec3(0.1, 0.0, 0.0);
+  d.dir = vec3(0.0, 1.0, 0.0);
   bvh_node d_node;
-  d_node.intervals[0] = vec2(-100, 100);
-  d_node.intervals[1] = vec2(-100, 100);
-  d_node.intervals[2] = vec2(-100, 100);
+  d_node.intervals[0] = vec2(0, 1);
+  d_node.intervals[1] = vec2(0, 1);
+  d_node.intervals[2] = vec2(0, 1);
   if (bbox_intersect(d, d_node)) FragColour[1] = 1.0;
   } else {
     FragColour = screentex;
