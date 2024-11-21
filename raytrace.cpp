@@ -24,8 +24,8 @@
 
 #include <unistd.h>
 
-void load_three_spheres(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO);
-void load_final_scene(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO);
+void load_three_spheres(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO, UBO bvhUBO);
+void load_final_scene(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO, UBO bvhUBO);
 
 float vertices[] = {
     // positions         // texture coords
@@ -105,6 +105,9 @@ int main(int argc, char* args[])
     // MATERIALS
     int matUBOSize = 20000;
     int sphereUBOSize = 20000;
+    int bvhUBOSize = 2*sphereUBOSize; // Since bvh is a btree, and spheres are the leaf nodes, 
+                                      // should not exceed 2*sphereUBOSize
+                                      // (Note: spheres are (currently) 48 bytes, bvh nodes are 32)
 
     UBO matUBO = UBO(matUBOSize);
     matUBO.bind(0, 0, -1);
@@ -113,6 +116,10 @@ int main(int argc, char* args[])
     UBO sphereUBO = UBO(sphereUBOSize);
     sphereUBO.bind(1, 0, -1);
     ourShader.bindUBO(sphereUBO, "Spheres");
+
+    UBO bvhUBO = UBO(bvhUBOSize);
+    bvhUBO.bind(2, 0, -1);
+    ourShader.bindUBO(bvhUBO, "BVH");
 
     // RANDOM GENERATION
     randgen r {};
@@ -132,8 +139,8 @@ int main(int argc, char* args[])
     UBO precomp1 = UBO(precomp1Size);
     UBO precomp2 = UBO(precomp2Size);
 
-    precomp1.bind(2, 0, -1);
-    precomp2.bind(3, 0, -1);
+    precomp1.bind(3, 0, -1);
+    precomp2.bind(4, 0, -1);
 
     ourShader.bindUBO(precomp1, "Precomp_1");
     ourShader.bindUBO(precomp2, "Precomp_2");
@@ -151,7 +158,7 @@ int main(int argc, char* args[])
     material_list materials = material_list();
     hittable_list objects = hittable_list();
 
-    load_three_spheres(cam, materials, objects, matUBO, sphereUBO);
+    load_final_scene(cam, materials, objects, matUBO, sphereUBO, bvhUBO);
 
     colour clearcolour = colour(0.2f, 0.3f, 0.3f);
     // NOISEGEN PASS:
@@ -278,7 +285,7 @@ int main(int argc, char* args[])
     return 0;
 }
 
-void load_three_spheres(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO) {
+void load_three_spheres(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO, UBO bvhUBO) {
     // Add Materials
 
     Camera::orientation uvw;
@@ -323,9 +330,10 @@ void load_three_spheres(Camera &cam, material_list &materials, hittable_list &ob
     std::cout << bvh.bounding_box();
     objects.toUBO(sphereUBO);
     materials.toUBO(matUBO);
+    bvh.toUBO(bvhUBO, 0, 0);
 }
 
-void load_final_scene(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO) {
+void load_final_scene(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO, UBO bvhUBO) {
     Camera::orientation uvw;
 
     uvw.lookfrom = point3(13, 2, 3);
@@ -395,4 +403,5 @@ void load_final_scene(Camera &cam, material_list &materials, hittable_list &obje
     std::cout << bvh.bounding_box();
     objects.toUBO(sphereUBO);
     materials.toUBO(matUBO);
+    bvh.toUBO(bvhUBO, 0, 0);
 }

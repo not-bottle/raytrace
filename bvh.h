@@ -60,7 +60,7 @@ class bvh_node : public hittable {
             node = queue.front();
 
             if (node->leaf) {
-                obj_idx = node->object->id;
+                obj_idx = node->object->id; // NOTE! Assumes objects have correct idx initialized
             } else {
                 queue.push(node->left);
                 queue.push(node->right);

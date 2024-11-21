@@ -79,6 +79,20 @@ struct sphere
   vec3 path;
 };
 
+struct bvh_node
+{
+  bool leaf;
+  int obj_idx;
+  vec2[3] intervals;
+};
+
+struct int_queue
+{
+  int front;
+  int back;
+  int[128] queue;
+};
+
 layout (std140) uniform Precomp_1
 {
   vec3[7919] unit_vectors;
@@ -101,10 +115,17 @@ layout (std140) uniform Spheres
   sphere[64] spheres;
 };
 
+layout (std140) uniform BVH
+{
+  bvh_node[128] bvh;
+};
+
 bool near_zero(vec3 v);
 
 float hit_sphere(vec3 origin, float radius, ray r);
 hit hit_any(ray r);
+hit hit_any_bvh(ray r);
+bool bbox_intersect(ray r, bvh_node node);
 
 ray bounce(ray r, inout rand_state state);
 vec3 raycast(ray r, inout rand_state state);
@@ -116,6 +137,11 @@ void material_shade(inout hit h, inout ray r, inout rand_state state);
 void lambertian(material m, inout hit h, inout ray r, inout rand_state state);
 void metallic(material m, inout hit h, inout ray r, inout rand_state state);
 void dialectric(material m, inout hit h, inout ray r, inout rand_state state);
+
+bool queue_isempty(inout int_queue queue);
+int popi(inout int_queue queue);
+int pushi(inout int_queue queue, int i);
+int fronti(inout int_queue queue);
 
 vec3 random_unit_vector(inout rand_state s);
 vec3 random_on_hemisphere(inout rand_state s, vec3 normal);
@@ -231,6 +257,64 @@ ray bounce(ray r, inout rand_state state)
   return r;
 }
 
+hit hit_any_bvh(ray r)
+{
+  hit h;
+  h.point = vec3(0.0f, 0.0f, 0.0f);
+  h.normal = vec3(0.0f, 0.0f, 0.0f);
+  h.hit = false;
+  h.interior = false;
+
+  sphere s;
+  sphere new_sphere;
+  float new_t;
+  float t = -1.0f;
+
+  vec3 origin_in_time;
+
+  int_queue queue;
+  queue.front = 0;
+  queue.back = 0;
+
+  int idx = 0;
+  bvh_node node;
+
+  pushi(queue, idx);
+  while(!queue_isempty(queue)) 
+  {
+    idx = popi(queue);
+    node = bvh[idx];
+    if (bbox_intersect(r, node)) {
+      if (node.leaf) {
+        new_sphere = spheres[node.obj_idx];
+        origin_in_time = new_sphere.origin + new_sphere.path*r.time;
+        new_t = hit_sphere(origin_in_time, new_sphere.radius, r);
+        if (t < 0 || (new_t < t && new_t > 0.001)) {
+          t = new_t;
+          s = new_sphere;
+        }
+      } else {
+        pushi(queue, 2*idx + 1);
+        pushi(queue, 2*idx + 2);
+      }
+    }
+  }
+
+  if (t > 0.001f)
+  {
+    h.point = r.origin + r.dir*t;
+    h.normal = (h.point - s.origin) / s.radius;
+    if (dot(h.normal, r.dir) >= 0) {
+      h.normal = -h.normal;
+      h.interior = true;
+    }
+    h.mat = s.mat;
+    h.hit = true;
+  }
+
+  return h;
+}
+
 hit hit_any(ray r)
 {
   hit h;
@@ -268,6 +352,37 @@ hit hit_any(ray r)
   }
 
   return h;
+}
+
+bool bbox_intersect(ray r, bvh_node node) {
+  float t0;
+  float t1;
+  float d_inv;
+  vec2 ray_t;
+
+  const float pos_infinity = intBitsToFloat(0x7F800000);
+  const float neg_infinity = intBitsToFloat(0xFF800000);
+
+  ray_t[0] = pos_infinity;
+  ray_t[1] = neg_infinity;
+
+  for (int i = 0; i < 3; i++) {
+    d_inv = 1.0 / r.dir[i];
+    t0 = (node.intervals[i][0] - r.origin[i]) * d_inv;
+    t1 = (node.intervals[i][1] - r.origin[i]) * d_inv;
+
+    if (t0 < t1) {
+      if (t0 > ray_t[0]) ray_t[0] = t0;
+      if (t1 < ray_t[1]) ray_t[1] = t1;
+    } else {
+      if (t1 > ray_t[0]) ray_t[0] = t1;
+      if (t0 < ray_t[1]) ray_t[1] = t0;
+    } 
+
+    if (ray_t[1] <= ray_t[0]) return false;
+  }
+
+  return true;
 }
 
 
@@ -366,7 +481,6 @@ float shlick(float cosine, float rel_refract_index)
   return r0 + (1-r0)*pow((1 - cosine), 5);
 }
 
-
 vec3 shade_sky(vec3 dir, vec3 albedo) {
 
   float a =  0.5f*(1.0f + normalize(dir).y);
@@ -378,6 +492,26 @@ vec3 shade_sky(vec3 dir, vec3 albedo) {
 bool near_zero(vec3 v) {
   float s = 1e-8;
   return (abs(v.x) < s && abs(v.y) < s && abs(v.z) < s);
+}
+
+bool queue_isempty(inout int_queue queue) {
+  return queue.front == queue.back;
+}
+
+int popi(inout int_queue queue) {
+  int i = queue.queue[queue.front];
+  queue.front += 1;
+  return i;
+}
+
+int pushi(inout int_queue queue, int i) {
+  queue.queue[queue.back] = i;
+  queue.back += 1;
+  return i;
+}
+
+int fronti(inout int_queue queue) {
+  return queue.queue[queue.front];
 }
 
 vec3 random_unit_vector(inout rand_state s) { return random_unit_vector(s.s); }
