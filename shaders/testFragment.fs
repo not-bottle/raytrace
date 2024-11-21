@@ -51,6 +51,7 @@ struct hit
   bool hit;
   bool interior;
   int mat;
+  vec3 DEBUG;
 };
 
 struct ray
@@ -222,6 +223,16 @@ void main()
   float gamma = 2.2;
 
   FragColour.rgb = pow(FragColour.rgb, vec3(1.0/gamma));
+
+  ray d;
+  d.count = 0u;
+  d.origin = vec3(0.0, 0.0, 0.0);
+  d.dir = vec3(1.0, 1.0, 1.0);
+  bvh_node d_node;
+  d_node.intervals[0] = vec2(-100, 100);
+  d_node.intervals[1] = vec2(-100, 100);
+  d_node.intervals[2] = vec2(-100, 100);
+  if (bbox_intersect(d, d_node)) FragColour[1] = 1.0;
   } else {
     FragColour = screentex;
   }
@@ -363,13 +374,13 @@ bool bbox_intersect(ray r, bvh_node node) {
   const float pos_infinity = intBitsToFloat(0x7F800000);
   const float neg_infinity = intBitsToFloat(0xFF800000);
 
-  ray_t[0] = pos_infinity;
-  ray_t[1] = neg_infinity;
+  ray_t[0] = neg_infinity;
+  ray_t[1] = pos_infinity;
 
   for (int i = 0; i < 3; i++) {
     d_inv = 1.0 / r.dir[i];
-    t0 = (node.intervals[i][0] - r.origin[i]) * d_inv;
-    t1 = (node.intervals[i][1] - r.origin[i]) * d_inv;
+    t0 = (node.intervals[i].x - r.origin[i]) * d_inv;
+    t1 = (node.intervals[i].y - r.origin[i]) * d_inv;
 
     if (t0 < t1) {
       if (t0 > ray_t[0]) ray_t[0] = t0;
