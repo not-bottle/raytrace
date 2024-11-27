@@ -51,7 +51,7 @@ struct hit
   bool hit;
   bool interior;
   int mat;
-  vec3 DEBUG;
+  int DEBUG;
 };
 
 struct ray
@@ -62,6 +62,7 @@ struct ray
   uint count;
   vec3 albedo;
   float time;
+  int DEBUG;
 };
 
 struct material
@@ -82,8 +83,10 @@ struct sphere
 
 struct bvh_node
 {
-  bool leaf;
+  int leaf;
   int obj_idx;
+  int left_id;
+  int right_id;
   vec2[3] intervals;
 };
 
@@ -108,28 +111,28 @@ layout (std140) uniform Precomp_2
 
 layout (std140) uniform Materials
 {
-  material[64] materials;
+  material[512] materials;
 };
 
 layout (std140) uniform Spheres 
 {
-  sphere[64] spheres;
+  sphere[512] spheres;
 };
 
 layout (std140) uniform BVH
 {
-  bvh_node[128] bvh;
+  bvh_node[1536] bvh;
 };
 
 bool near_zero(vec3 v);
 
-float hit_sphere(vec3 origin, float radius, ray r);
-hit hit_any(ray r);
-hit hit_any_bvh(ray r);
-bool bbox_intersect(ray r, bvh_node node);
+float hit_sphere(vec3 origin, float radius, inout ray r);
+hit hit_any(inout ray r);
+hit hit_any_bvh(inout ray r);
+bool bbox_intersect(inout ray r, bvh_node node);
 
-ray bounce(ray r, inout rand_state state);
-vec3 raycast(ray r, inout rand_state state);
+ray bounce(inout ray r, inout rand_state state);
+vec3 raycast(inout ray r, inout rand_state state);
 
 vec3 shade_sky(vec3 dir, vec3 albedo);
 float shlick(float cosine, float rel_refract_index);
@@ -143,6 +146,8 @@ bool queue_isempty(inout int_queue queue);
 int popi(inout int_queue queue);
 int pushi(inout int_queue queue, int i);
 int fronti(inout int_queue queue);
+
+vec3 debug_colours(int i);
 
 vec3 random_unit_vector(inout rand_state s);
 vec3 random_on_hemisphere(inout rand_state s, vec3 normal);
@@ -193,6 +198,7 @@ void main()
   vec3 ray_origin;
 
   ray r;
+  r.DEBUG = 0;
 
   for (int i=0;i<num_samples;i++)
   {
@@ -223,22 +229,13 @@ void main()
   float gamma = 2.2;
 
   FragColour.rgb = pow(FragColour.rgb, vec3(1.0/gamma));
-
-  ray d;
-  d.count = 0u;
-  d.origin = vec3(0.1, 0.0, 0.0);
-  d.dir = vec3(0.0, 1.0, 0.0);
-  bvh_node d_node;
-  d_node.intervals[0] = vec2(0, 1);
-  d_node.intervals[1] = vec2(0, 1);
-  d_node.intervals[2] = vec2(0, 1);
-  if (bbox_intersect(d, d_node)) FragColour[1] = 1.0;
+  
   } else {
     FragColour = screentex;
   }
 }
 
-vec3 raycast(ray r, inout rand_state state)
+vec3 raycast(inout ray r, inout rand_state state)
 {
   for (uint i=0u; i<bounce_limit; i++)
   {
@@ -249,9 +246,9 @@ vec3 raycast(ray r, inout rand_state state)
   return r.albedo;
 }
 
-ray bounce(ray r, inout rand_state state)
+ray bounce(inout ray r, inout rand_state state)
 {
-  hit h = hit_any(r);
+  hit h = hit_any_bvh(r);
 
   if (h.hit)
   {
@@ -268,7 +265,7 @@ ray bounce(ray r, inout rand_state state)
   return r;
 }
 
-hit hit_any_bvh(ray r)
+hit hit_any_bvh(inout ray r)
 {
   hit h;
   h.point = vec3(0.0f, 0.0f, 0.0f);
@@ -296,17 +293,21 @@ hit hit_any_bvh(ray r)
     idx = popi(queue);
     node = bvh[idx];
     if (bbox_intersect(r, node)) {
-      if (node.leaf) {
+      if (node.leaf == 1) {
         new_sphere = spheres[node.obj_idx];
         origin_in_time = new_sphere.origin + new_sphere.path*r.time;
         new_t = hit_sphere(origin_in_time, new_sphere.radius, r);
         if (t < 0 || (new_t < t && new_t > 0.001)) {
+          if (t >= 0) {
+            r.DEBUG += 1;
+          }
           t = new_t;
           s = new_sphere;
         }
+
       } else {
-        pushi(queue, 2*idx + 1);
-        pushi(queue, 2*idx + 2);
+        pushi(queue, node.left_id);
+        pushi(queue, node.right_id);
       }
     }
   }
@@ -326,7 +327,7 @@ hit hit_any_bvh(ray r)
   return h;
 }
 
-hit hit_any(ray r)
+hit hit_any(inout ray r)
 {
   hit h;
   h.point = vec3(0.0f, 0.0f, 0.0f);
@@ -365,7 +366,7 @@ hit hit_any(ray r)
   return h;
 }
 
-bool bbox_intersect(ray r, bvh_node node) {
+bool bbox_intersect(inout ray r, bvh_node node) {
   float t0;
   float t1;
   float d_inv;
@@ -397,7 +398,7 @@ bool bbox_intersect(ray r, bvh_node node) {
 }
 
 
-float hit_sphere(vec3 origin, float radius, ray r)
+float hit_sphere(vec3 origin, float radius, inout ray r)
 {
   vec3 oc = origin - r.origin;
   float a = dot(r.dir, r.dir);
@@ -523,6 +524,30 @@ int pushi(inout int_queue queue, int i) {
 
 int fronti(inout int_queue queue) {
   return queue.queue[queue.front];
+}
+
+vec3 debug_colours(int i) {
+  if (i == 0) {
+    return vec3(0, 0, 0);
+  } else if (i == 1) {
+    return vec3(1, 0, 0);
+  } else if (i == 2) {
+    return vec3(0, 1, 0);
+  } else if (i == 3) {
+    return vec3(0, 0, 1);
+  } else if (i == 4) {
+    return vec3(1, 1, 0);
+  } else if (i == 5) {
+    return vec3(0, 1, 1);
+  } else if (i == 6) {
+    return vec3(1, 0, 1);
+  } else if (i == 7) {
+    return vec3(.25, .25, .25);
+  } else if (i == 8) {
+    return vec3(0.5, 0.5, 0.5);
+  } else  {
+    return vec3(1, 1, 1);
+  }
 }
 
 vec3 random_unit_vector(inout rand_state s) { return random_unit_vector(s.s); }

@@ -32,7 +32,8 @@ class randgen {
     }
 
     float randfloat(float min, float max) {
-        return min + randfloat()*(max-min);
+        float r = (randfloat() + 1.0) / 2;
+        return min + r*(max-min);
     }
 
     vec3 randvec3() {

@@ -48,7 +48,7 @@ int NUM_SAMPLES = 32;
 uint32_t BOUNCE_LIMIT = 50;
 
 // Other constants
-const int MAX_NUM_OBJECTS = 128;
+const int MAX_NUM_OBJECTS = 512;
 const int SPHERE_UBO_SIZE = MAX_NUM_OBJECTS*32;
 
 int RANDOM_ARRAY_SIZE = 8192;
@@ -103,9 +103,9 @@ int main(int argc, char* args[])
     // Set up UBO data
 
     // MATERIALS
-    int matUBOSize = 20000;
-    int sphereUBOSize = 20000;
-    int bvhUBOSize = 2*sphereUBOSize; // Since bvh is a btree, and spheres are the leaf nodes, 
+    int matUBOSize = 24576;
+    int sphereUBOSize = 24576;
+    int bvhUBOSize = 3*sphereUBOSize; // Since bvh is a btree, and spheres are the leaf nodes, 
                                       // should not exceed 2*sphereUBOSize
                                       // (Note: spheres are (currently) 48 bytes, bvh nodes are 32)
 
@@ -313,16 +313,18 @@ void load_three_spheres(Camera &cam, material_list &materials, hittable_list &ob
 
     // Add spheres
 
-    auto ground = std::make_shared<sphere>(sphere(100.0, vec3(0.0, -100.5, -1.0), mat_ground));
-    auto centre = std::make_shared<sphere>(sphere(0.5, vec3(0.0, 0.0, -1.2), vec3(0.0, 0.0, -0.5), mat_centre));
-    auto left = std::make_shared<sphere>(sphere(0.5, vec3(-1.0, 0.0, -1.0), mat_left));
-    auto left_bubble = std::make_shared<sphere>(sphere(0.4, vec3(-1.0, 0.0, -1.0), mat_left_bubble));
-    auto right = std::make_shared<sphere>(sphere(0.5, vec3(1.0, 0.0, -1.0), mat_right));
+    auto ground = std::make_shared<sphere>(sphere(100.0, vec3(0.0, -100.5, -1.0), vec3(0.0, 0.5, 0.0), mat_ground));
+    auto centre = std::make_shared<sphere>(sphere(0.5, vec3(0.0, 0.0, -1.2), vec3(0.0, 0.5, 0.0), mat_centre));
+    auto centre2 = std::make_shared<sphere>(sphere(0.5, vec3(0.0, 1.0, -1.2), vec3(0.0, 0.5, 0.0), mat_centre));
+    auto left = std::make_shared<sphere>(sphere(0.5, vec3(-1.0, 0.0, -1.0), mat_right));
+    auto left_bubble = std::make_shared<sphere>(sphere(0.5, vec3(-1.5, 0.0, -1.0), vec3(0.0, 0.5, 0.0), mat_centre));
+    auto right = std::make_shared<sphere>(sphere(0.5, vec3(1.0, 0.0, -1.0), vec3(0.0, 0.5, 0.0), mat_right));
 
     objects.add(ground);
     objects.add(centre);
+    objects.add(centre2);
     objects.add(left);
-    objects.add(left_bubble);
+    ///objects.add(left_bubble);
     objects.add(right);
 
     std::cout << objects.bounding_box();
@@ -330,7 +332,7 @@ void load_three_spheres(Camera &cam, material_list &materials, hittable_list &ob
     std::cout << bvh.bounding_box();
     objects.toUBO(sphereUBO);
     materials.toUBO(matUBO);
-    bvh.toUBO(bvhUBO, 0, 0);
+    bvh.toUBO(bvhUBO, 0);
 }
 
 void load_final_scene(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO, UBO bvhUBO) {
@@ -375,11 +377,10 @@ void load_final_scene(Camera &cam, material_list &materials, hittable_list &obje
 
                 if (choose_mat < 0.8) {
                     auto centre2 = centre + vec3(0.0, random_float(0, 0.3), 0.0);
-
                     auto albedo = colour::random() * colour::random();
                     auto sphere_material = std::make_shared<material>(lambertian(albedo));
                     materials.add(sphere_material);
-                    auto spherex = std::make_shared<sphere>(sphere(0.2, centre, centre2 - centre, sphere_material));
+                    auto spherex = std::make_shared<sphere>(sphere(0.2, centre, sphere_material));
                     objects.add(spherex);
                 } else if (choose_mat < 0.95) {
                     auto albedo = colour::random(0.5, 1);
@@ -403,5 +404,5 @@ void load_final_scene(Camera &cam, material_list &materials, hittable_list &obje
     std::cout << bvh.bounding_box();
     objects.toUBO(sphereUBO);
     materials.toUBO(matUBO);
-    bvh.toUBO(bvhUBO, 0, 0);
+    bvh.toUBO(bvhUBO, 0);
 }

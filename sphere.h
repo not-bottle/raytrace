@@ -15,7 +15,6 @@
 class sphere : public hittable
 {
     public:
-    int id;
     float radius;
     vec3 origin;
     vec3 path;
@@ -41,9 +40,7 @@ class sphere : public hittable
 
     aabb bounding_box() const override { return bbox; }
 
-    virtual void toUBO(UBO ubo, int offset, int idx) override {
-        id = idx; // (Messy - used by bvh_node)
-
+    virtual void toUBO(UBO ubo, int offset) const override {
         ubo.sub(&(mat->id), sizeof(int), offset);
         ubo.sub(&radius, sizeof(int), offset + 4);
         ubo.subVec3(origin, offset + 16);

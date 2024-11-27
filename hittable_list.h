@@ -27,7 +27,8 @@ class hittable_list
         int idx = 0;
         for (std::vector<std::shared_ptr<hittable>>::iterator it = objects.begin(); it != objects.end(); it++)
         {
-            (*it)->toUBO(ubo, offset, idx);
+            (*it)->toUBO(ubo, offset);
+            (*it)->id = idx;
             offset += (*it)->size;
             idx += 1;
         }
