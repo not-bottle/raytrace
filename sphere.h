@@ -40,7 +40,7 @@ class sphere : public hittable
 
     aabb bounding_box() const override { return bbox; }
 
-    virtual void toUBO(UBO ubo, int offset) const override {
+    virtual void toUBO(UBO ubo, int offset) override {
         ubo.sub(&(mat->id), sizeof(int), offset);
         ubo.sub(&radius, sizeof(int), offset + 4);
         ubo.subVec3(origin, offset + 16);

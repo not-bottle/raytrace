@@ -1,8 +1,12 @@
+//#define DEBUG
+
 #include <iostream>
 #include <stdlib.h>
 #include <cmath>
 #include <algorithm>
 #include <memory>
+
+#include <chrono>
 
 #include <glad/glad.h>
 #include <SDL2/SDL.h>
@@ -26,6 +30,7 @@
 
 void load_three_spheres(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO, UBO bvhUBO);
 void load_final_scene(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO, UBO bvhUBO);
+void load_grid_scene(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO, UBO bvhUBO);
 
 float vertices[] = {
     // positions         // texture coords
@@ -41,10 +46,10 @@ unsigned int indices[] = {
 };
 
 int SCREEN_WIDTH = 1600;
-int RENDER_WIDTH = 400;
+int RENDER_WIDTH = 1600;
 float ASPECT_RATIO = 16.0/9.0;
 
-int NUM_SAMPLES = 32;
+int NUM_SAMPLES = 128;
 uint32_t BOUNCE_LIMIT = 50;
 
 // Other constants
@@ -201,7 +206,7 @@ int main(int argc, char* args[])
 
     ourShader.setInt("num_spheres", objects.objects.size());
 
-    float chunk_size = 25.0f;
+    float chunk_size = 100.0f;
     float x_passes = cam.renderWidth / chunk_size;
     float y_passes = cam.renderHeight / chunk_size;
 
@@ -211,6 +216,8 @@ int main(int argc, char* args[])
     xmax = 0.0f;
     ymin = 0.0f;
     ymax = 0.0f;
+
+    auto a = std::chrono::high_resolution_clock::now();
 
     for (int j=0; j < y_passes; j++)
     {
@@ -265,6 +272,10 @@ int main(int argc, char* args[])
         xmax = 0.0f;
     }
 
+    auto b = std::chrono::high_resolution_clock::now();
+
+    std::cout << "Render time: " << std::chrono::duration_cast<std::chrono::seconds>(b - a).count() << "s" <<std::endl;
+
     while (!c.isQuit())
     {
         c.bind();
@@ -283,6 +294,54 @@ int main(int argc, char* args[])
     c.close();
 
     return 0;
+}
+
+void load_grid_scene(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO, UBO bvhUBO) {
+    // Add Materials
+
+    Camera::orientation uvw;
+
+    uvw.lookfrom = point3(0, 0, 0);
+    uvw.lookat = point3(0, 0, -1);
+    uvw.vup = vec3(0, 1, 0);
+    uvw.vfov = 90.0;
+    uvw.defocus_angle = 0.0;
+    uvw.focus_dist = 10;
+
+    cam.cameraSetup(uvw);
+
+    auto mat_ground = std::make_shared<material>(lambertian(vec3(0.8, 0.8, 0.0)));
+    auto mat_l1 = std::make_shared<material>(lambertian(vec3(0.1, 0.2, 0.5)));
+    auto mat_l2 = std::make_shared<material>(lambertian(vec3(0.5, 0.2, 0.1)));
+    auto mat_r1 = std::make_shared<material>(lambertian(vec3(0.1, 0.5, 0.2)));
+    auto mat_r2 = std::make_shared<material>(lambertian(vec3(0.5, 0.1, 0.2)));
+
+    materials.add(mat_ground);
+    materials.add(mat_l1);
+    materials.add(mat_l2);
+    materials.add(mat_r1);
+    materials.add(mat_r2);
+
+    // Add spheres
+
+    auto ground = std::make_shared<sphere>(sphere(100.0, vec3(0.0, -100.5, -1.0), mat_ground));
+    auto l1 = std::make_shared<sphere>(sphere(0.5, vec3(-0.5, -0.5, -2.0), mat_l1));
+    auto l2 = std::make_shared<sphere>(sphere(0.5, vec3(-0.5, 0.5, -2.0), mat_l2));
+    auto r1 = std::make_shared<sphere>(sphere(0.5, vec3(0.5, -0.5, -2.0), mat_r1));
+    auto r2 = std::make_shared<sphere>(sphere(0.5, vec3(0.5, 0.5, -2.0), mat_r2));
+
+    //objects.add(ground);
+    objects.add(l1);
+    objects.add(l2);
+    objects.add(r1);
+    objects.add(r2);
+
+    std::cout << objects.bounding_box();
+    bvh_node bvh = bvh_node(objects);
+    std::cout << bvh.bounding_box();
+    objects.toUBO(sphereUBO);
+    materials.toUBO(matUBO);
+    bvh.toUBO(bvhUBO, 0);
 }
 
 void load_three_spheres(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO, UBO bvhUBO) {
@@ -313,12 +372,12 @@ void load_three_spheres(Camera &cam, material_list &materials, hittable_list &ob
 
     // Add spheres
 
-    auto ground = std::make_shared<sphere>(sphere(100.0, vec3(0.0, -100.5, -1.0), vec3(0.0, 0.5, 0.0), mat_ground));
-    auto centre = std::make_shared<sphere>(sphere(0.5, vec3(0.0, 0.0, -1.2), vec3(0.0, 0.5, 0.0), mat_centre));
-    auto centre2 = std::make_shared<sphere>(sphere(0.5, vec3(0.0, 1.0, -1.2), vec3(0.0, 0.5, 0.0), mat_centre));
+    auto ground = std::make_shared<sphere>(sphere(100.0, vec3(0.0, -100.5, -1.0), mat_ground));
+    auto centre = std::make_shared<sphere>(sphere(0.5, vec3(0.0, 0.0, -1.2), mat_centre));
+    auto centre2 = std::make_shared<sphere>(sphere(0.5, vec3(0.0, 1.0, -1.2), mat_centre));
     auto left = std::make_shared<sphere>(sphere(0.5, vec3(-1.0, 0.0, -1.0), mat_right));
-    auto left_bubble = std::make_shared<sphere>(sphere(0.5, vec3(-1.5, 0.0, -1.0), vec3(0.0, 0.5, 0.0), mat_centre));
-    auto right = std::make_shared<sphere>(sphere(0.5, vec3(1.0, 0.0, -1.0), vec3(0.0, 0.5, 0.0), mat_right));
+    auto left_bubble = std::make_shared<sphere>(sphere(0.5, vec3(-1.5, 0.0, -1.0), mat_centre));
+    auto right = std::make_shared<sphere>(sphere(0.5, vec3(1.0, 0.0, -1.0), mat_right));
 
     objects.add(ground);
     objects.add(centre);

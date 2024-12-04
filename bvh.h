@@ -20,7 +20,11 @@ class bvh_node : public hittable {
     bvh_node(std::vector<std::shared_ptr<hittable>> &objects, size_t start, size_t end) 
     {
         int axis = rand.randint(0, 2);
+
+        #ifdef DEBUG
+        axis = 0;
         //std::cout << "Split at axis: " << axis << std::endl;
+        #endif
 
         auto comparator = (axis == 0) ? box_compare_x 
                         : (axis == 1) ? box_compare_y 
@@ -47,13 +51,14 @@ class bvh_node : public hittable {
 
     aabb bounding_box() const override { return bbox; }
 
-    void toUBO(UBO ubo, int offset) const override {
+    void toUBO(UBO ubo, int offset) override {
         std::queue<std::shared_ptr<bvh_node>> queue;
 
         std::shared_ptr<bvh_node> root = std::make_shared<bvh_node>(*this);
         std::shared_ptr<bvh_node> node;
 
         int idx = 0;
+        id = 0;
 
         // Set ids
         queue.push(root);
@@ -69,25 +74,46 @@ class bvh_node : public hittable {
         }
         std::cout << "BVH max idx: " << idx << std::endl;
 
+        build_links();
+
         int offset0 = 0;
         int obj_idx;
-        int left_id;
-        int right_id;
+        int hit_id;
+        int miss_id;
+
+        root->hit_node = left; // Fix all this this is scuffed lmao
 
         queue.push(root);
         while(!queue.empty()) {
             node = queue.front();
             
-            if (!node->leaf) {
+            if (node->leaf == 0) {
                 obj_idx = 0;
-                left_id = node->left->id;
-                right_id = node->right->id;
+                
+                if (node->hit_node == NULL) {
+                    hit_id = -1;
+                } else {
+                    hit_id = node->hit_node->id;
+                }
+
+                if (node->miss_node == NULL) {
+                    miss_id = -1;
+                } else {
+                    miss_id = node->miss_node->id;
+                }
+
                 queue.push(node->left);
                 queue.push(node->right);
             } else {
                 obj_idx = node->object->id;
-                left_id = 0;
-                right_id = 0;
+
+                if (node->hit_node != NULL) {
+                    hit_id = node->hit_node->id;
+                } else {
+                    hit_id = -1;
+                }
+
+                miss_id = hit_id;
             }
 
             // Insert node into UBO
@@ -99,22 +125,25 @@ class bvh_node : public hittable {
             // interval-y - 2*4bytes (blank)
             // interval-z - 2*4bytes (blank)
 
-            // std::cout << "Node - " << std::endl;
+            #ifdef DEBUG
+            std::cout << "Node - "  << node->id << std::endl;
+            std::cout << "leaf: " << node->leaf << std::endl;
+            std::cout << "obj_idx: " << obj_idx << std::endl;
+            std::cout << "hit_id: " << hit_id << std::endl;
+            std::cout << "miss_id: " << miss_id << std::endl;
+            std::cout << node->bbox << std::endl;
+            #endif
+            
             ubo.sub(&(node->leaf), sizeof(int), offset + offset0);
-            // std::cout << "leaf: " << node->leaf << std::endl;
             ubo.sub(&obj_idx, sizeof(int), offset + offset0 + 4);
-            // std::cout << "obj_idx: " << obj_idx << std::endl;
-            ubo.sub(&left_id, sizeof(int), offset + offset0 + 8);
-            // std::cout << "left_id: " << obj_idx << std::endl;
-            ubo.sub(&right_id, sizeof(int), offset + offset0 + 12);
-            // std::cout << "right_id: " << obj_idx << std::endl;
+            ubo.sub(&hit_id, sizeof(int), offset + offset0 + 8);
+            ubo.sub(&miss_id, sizeof(int), offset + offset0 + 12);
             ubo.sub(&(node->bbox.x.min), sizeof(float), offset + offset0 + 16);
             ubo.sub(&(node->bbox.x.max), sizeof(float), offset + offset0 + 20);
             ubo.sub(&(node->bbox.y.min), sizeof(float), offset + offset0 + 32);
             ubo.sub(&(node->bbox.y.max), sizeof(float), offset + offset0 + 36);
             ubo.sub(&(node->bbox.z.min), sizeof(float), offset + offset0 + 48);
             ubo.sub(&(node->bbox.z.max), sizeof(float), offset + offset0 + 52);
-            // std::cout << node->bbox << std::endl;
 
             offset0 += 64;
 
@@ -126,6 +155,9 @@ class bvh_node : public hittable {
     std::shared_ptr<hittable> object;
     std::shared_ptr<bvh_node> left;
     std::shared_ptr<bvh_node> right;
+    std::shared_ptr<bvh_node> parent;
+    std::shared_ptr<bvh_node> hit_node = NULL;
+    std::shared_ptr<bvh_node> miss_node = NULL;
     aabb bbox;
 
     static randgen rand;
@@ -146,6 +178,20 @@ class bvh_node : public hittable {
 
     static bool box_compare_z(const std::shared_ptr<hittable> a, const std::shared_ptr<hittable> b) {
         return box_compare(a, b, 2);
+    }
+
+    /* Given already constructed tree, build hit-or-miss links recursively. */
+    void build_links(std::shared_ptr<bvh_node> next_right = NULL) {
+        if (!leaf) {
+            hit_node = left;
+            miss_node = next_right;
+
+            left->build_links(right);
+            right->build_links(next_right);
+        } else {
+            hit_node = next_right;
+            miss_node = hit_node;
+        }
     }
 };
 

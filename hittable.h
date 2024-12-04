@@ -15,7 +15,7 @@ class hittable
     hittable() : size{0} {};
     hittable(int my_size) : size{my_size} {};
 
-    virtual void toUBO(UBO ubo, int offset) const = 0;
+    virtual void toUBO(UBO ubo, int offset) = 0;
 
     virtual aabb bounding_box() const = 0;
 };

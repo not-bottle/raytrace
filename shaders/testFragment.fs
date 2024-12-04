@@ -85,8 +85,8 @@ struct bvh_node
 {
   int leaf;
   int obj_idx;
-  int left_id;
-  int right_id;
+  int hit_id;
+  int miss_id;
   vec2[3] intervals;
 };
 
@@ -169,6 +169,8 @@ vec3 random_unit_vector(inout xorshift32_state state);
 vec3 random_on_hemisphere(inout xorshift32_state state, vec3 normal);
 vec3 random_unit_disk(inout xorshift32_state state);
 
+hit hit_any_bvh2(inout ray r);
+
 void main()
 {
   vec4 randtex   = texture(randTexture, TexCoords);
@@ -200,6 +202,8 @@ void main()
   ray r;
   r.DEBUG = 0;
 
+  int_queue queue;
+
   for (int i=0;i<num_samples;i++)
   {
     rand_square = random_square(state).xy;
@@ -229,8 +233,15 @@ void main()
   float gamma = 2.2;
 
   FragColour.rgb = pow(FragColour.rgb, vec3(1.0/gamma));
-  
-  } else {
+
+  int debug = 0;
+
+  if (debug == 1){
+    float d = float(r.DEBUG) / num_spheres / num_samples;
+    FragColour.rgb = vec3(d, d, d);
+  }
+  }
+  else {
     FragColour = screentex;
   }
 }
@@ -265,6 +276,56 @@ ray bounce(inout ray r, inout rand_state state)
   return r;
 }
 
+hit hit_any_bvh2(inout ray r)
+{
+  hit h;
+  h.point = vec3(0.0f, 0.0f, 0.0f);
+  h.normal = vec3(0.0f, 0.0f, 0.0f);
+  h.hit = false;
+  h.interior = false;
+
+  sphere s;
+  sphere new_sphere;
+  float new_t;
+  float t = -1.0f;
+
+  vec3 origin_in_time;
+
+  int idx = 0;
+  int next = 0;
+  bvh_node node;
+
+  for (int i = 0; i < 1023; i++)
+  {
+    node = bvh[i];
+    if (bbox_intersect(r, node)) {
+      if (node.leaf == 1) {
+        new_sphere = spheres[node.obj_idx];
+        origin_in_time = new_sphere.origin + new_sphere.path*r.time;
+        new_t = hit_sphere(origin_in_time, new_sphere.radius, r);
+        if (t < 0 || (new_t < t && new_t > 0.001)) {
+          t = new_t;
+          s = new_sphere;
+        }
+      }
+    }
+  }
+
+  if (t > 0.001f)
+  {
+    h.point = r.origin + r.dir*t;
+    h.normal = (h.point - s.origin) / s.radius;
+    if (dot(h.normal, r.dir) >= 0) {
+      h.normal = -h.normal;
+      h.interior = true;
+    }
+    h.mat = s.mat;
+    h.hit = true;
+  }
+
+  return h;
+}
+
 hit hit_any_bvh(inout ray r)
 {
   hit h;
@@ -280,17 +341,13 @@ hit hit_any_bvh(inout ray r)
 
   vec3 origin_in_time;
 
-  int_queue queue;
-  queue.front = 0;
-  queue.back = 0;
-
   int idx = 0;
   bvh_node node;
 
-  pushi(queue, idx);
-  while(!queue_isempty(queue)) 
+  int count = 0;
+
+  while(idx > -1 && count < 1024) 
   {
-    idx = popi(queue);
     node = bvh[idx];
     if (bbox_intersect(r, node)) {
       if (node.leaf == 1) {
@@ -298,18 +355,16 @@ hit hit_any_bvh(inout ray r)
         origin_in_time = new_sphere.origin + new_sphere.path*r.time;
         new_t = hit_sphere(origin_in_time, new_sphere.radius, r);
         if (t < 0 || (new_t < t && new_t > 0.001)) {
-          if (t >= 0) {
-            r.DEBUG += 1;
-          }
           t = new_t;
           s = new_sphere;
         }
-
-      } else {
-        pushi(queue, node.left_id);
-        pushi(queue, node.right_id);
       }
+      idx = node.hit_id;
+    } else { 
+      idx = node.miss_id;
     }
+
+    count += 1;
   }
 
   if (t > 0.001f)
@@ -404,6 +459,8 @@ float hit_sphere(vec3 origin, float radius, inout ray r)
   float a = dot(r.dir, r.dir);
   float h = dot(r.dir, oc);
   float c = dot(oc, oc) - radius*radius;
+
+  r.DEBUG += 1;
 
   float discriminant = h*h - a*c;
   if (discriminant >= 0) {
