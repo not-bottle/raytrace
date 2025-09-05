@@ -35,8 +35,13 @@ class interval {
         return interval(min - padding, max + padding);
     }
 
+    static const interval empty, universe;
+
     friend std::ostream& operator<< (std::ostream& out, const interval&);
 };
+
+const interval interval::empty    = interval(+infinity, -infinity);
+const interval interval::universe = interval(-infinity, +infinity);
 
 std::ostream& operator<< (std::ostream& out, const interval& i) 
 {

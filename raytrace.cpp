@@ -46,11 +46,13 @@ unsigned int indices[] = {
 };
 
 int SCREEN_WIDTH = 1600;
-int RENDER_WIDTH = 1600;
+int RENDER_WIDTH = 400;
 float ASPECT_RATIO = 16.0/9.0;
 
-int NUM_SAMPLES = 128;
+int NUM_SAMPLES = 100;
 uint32_t BOUNCE_LIMIT = 50;
+
+float CHUNK_SIZE = 25.0f;
 
 // Other constants
 const int MAX_NUM_OBJECTS = 512;
@@ -206,9 +208,8 @@ int main(int argc, char* args[])
 
     ourShader.setInt("num_spheres", objects.objects.size());
 
-    float chunk_size = 100.0f;
-    float x_passes = cam.renderWidth / chunk_size;
-    float y_passes = cam.renderHeight / chunk_size;
+    float x_passes = cam.renderWidth / CHUNK_SIZE;
+    float y_passes = cam.renderHeight / CHUNK_SIZE;
 
     float xmin, xmax, ymin, ymax;
 
@@ -230,7 +231,7 @@ int main(int argc, char* args[])
         renderfb.bindTexture(1);   
 
         ymin = ymax;
-        ymax = ymin + chunk_size;
+        ymax = ymin + CHUNK_SIZE;
 
         ourShader.setFloat("Y_MIN", ymin);
         ourShader.setFloat("Y_MAX", ymax);
@@ -248,7 +249,7 @@ int main(int argc, char* args[])
             renderfb.bindTexture(1);      
 
             xmin = xmax;
-            xmax = xmin + chunk_size;
+            xmax = xmin + CHUNK_SIZE;
             ourShader.setFloat("X_MIN", xmin);
             ourShader.setFloat("X_MAX", xmax);
 
@@ -375,15 +376,15 @@ void load_three_spheres(Camera &cam, material_list &materials, hittable_list &ob
     auto ground = std::make_shared<sphere>(sphere(100.0, vec3(0.0, -100.5, -1.0), mat_ground));
     auto centre = std::make_shared<sphere>(sphere(0.5, vec3(0.0, 0.0, -1.2), mat_centre));
     auto centre2 = std::make_shared<sphere>(sphere(0.5, vec3(0.0, 1.0, -1.2), mat_centre));
-    auto left = std::make_shared<sphere>(sphere(0.5, vec3(-1.0, 0.0, -1.0), mat_right));
-    auto left_bubble = std::make_shared<sphere>(sphere(0.5, vec3(-1.5, 0.0, -1.0), mat_centre));
+    auto left = std::make_shared<sphere>(sphere(0.5, vec3(-1.0, 0.0, -1.0), mat_left));
+    auto left_bubble = std::make_shared<sphere>(sphere(0.4, vec3(-1.0, 0.0, -1.0), mat_left_bubble));
     auto right = std::make_shared<sphere>(sphere(0.5, vec3(1.0, 0.0, -1.0), mat_right));
 
     objects.add(ground);
     objects.add(centre);
-    objects.add(centre2);
+    //objects.add(centre2);
     objects.add(left);
-    ///objects.add(left_bubble);
+    objects.add(left_bubble);
     objects.add(right);
 
     std::cout << objects.bounding_box();
@@ -435,11 +436,11 @@ void load_final_scene(Camera &cam, material_list &materials, hittable_list &obje
             if ((centre - point3(4, 0.2, 0)).length() > 0.9) {
 
                 if (choose_mat < 0.8) {
-                    auto centre2 = centre + vec3(0.0, random_float(0, 0.3), 0.0);
+                    auto centre2 = centre + vec3(0.0, random_float(0, 0.5), 0.0);
                     auto albedo = colour::random() * colour::random();
                     auto sphere_material = std::make_shared<material>(lambertian(albedo));
                     materials.add(sphere_material);
-                    auto spherex = std::make_shared<sphere>(sphere(0.2, centre, sphere_material));
+                    auto spherex = std::make_shared<sphere>(sphere(0.2, centre, centre2, sphere_material));
                     objects.add(spherex);
                 } else if (choose_mat < 0.95) {
                     auto albedo = colour::random(0.5, 1);

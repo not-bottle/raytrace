@@ -645,10 +645,6 @@ float random_float(inout cyclestate cs) {
   return random_vectors[idxcycle(cs)].x;
 }
 
-
-
-
-
 uint xorshift32(inout xorshift32_state state) {
   uint x = state.a;
   x ^= x << 13;

@@ -31,8 +31,22 @@ class aabb {
         return x;
      }
 
+     int longest_axis() const {
+         // Returns index of longest axis of bounding box
+         if (x.size() > y.size()) {
+            return x.size() > z.size() ? 0 : 2;
+         } else {
+            return y.size() > z.size() ? 1 : 2;
+         }
+     }
+
+     static const aabb empty, universe;
+
      friend std::ostream& operator<< (std::ostream& out, const aabb& bbox);
 };
+
+const aabb aabb::empty    = aabb(interval::empty,    interval::empty,    interval::empty);
+const aabb aabb::universe = aabb(interval::universe, interval::universe, interval::universe);
 
 std::ostream& operator<< (std::ostream& out, const aabb& bbox) 
 {

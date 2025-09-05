@@ -19,12 +19,18 @@ class bvh_node : public hittable {
 
     bvh_node(std::vector<std::shared_ptr<hittable>> &objects, size_t start, size_t end) 
     {
-        int axis = rand.randint(0, 2);
-
         #ifdef DEBUG
         axis = 0;
         //std::cout << "Split at axis: " << axis << std::endl;
         #endif
+
+        bbox = aabb::empty;
+
+        for (size_t object_index=start; object_index < end; object_index++) {
+            bbox = aabb(bbox, objects[object_index]->bounding_box());
+        }
+
+        int axis = bbox.longest_axis();
 
         auto comparator = (axis == 0) ? box_compare_x 
                         : (axis == 1) ? box_compare_y 
@@ -46,7 +52,8 @@ class bvh_node : public hittable {
             right = std::make_shared<bvh_node>(objects, mid, end);
         }
 
-        bbox = aabb(left->bounding_box(), right->bounding_box());           
+        // Removed due to bbox optimization constructing each bbox from the list of objects
+        //bbox = aabb(left->bounding_box(), right->bounding_box());           
     }
 
     aabb bounding_box() const override { return bbox; }

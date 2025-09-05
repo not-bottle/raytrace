@@ -7,6 +7,8 @@
 #include <iostream>
 #include <string>
 
+#include "vec3.h"
+
 // Main window management/setup (context?)
 
 class Context {
@@ -16,8 +18,8 @@ class Context {
     SDL_GLContext glContext = NULL;
 
     const unsigned int SDL_flags = SDL_INIT_VIDEO | SDL_INIT_EVENTS;
-    const int glMajorVersion = 3;
-    const int glMinorVersion = 3;
+    int glMajorVersion = 3;
+    int glMinorVersion = 3;
     const int glProfileMask = SDL_GL_CONTEXT_PROFILE_CORE;
 
     int screenWidth = 1;
@@ -28,6 +30,9 @@ class Context {
     public:
 
     Context(int myScreenWidth, int myScreenHeight) : screenWidth{myScreenWidth}, screenHeight{myScreenHeight} {};
+
+    Context(int myScreenWidth, int myScreenHeight, int myGlMajorVersion, int myGlMinorVersion) : screenWidth{myScreenWidth}, screenHeight{myScreenHeight},
+                                                                                                 glMajorVersion{myGlMajorVersion}, glMinorVersion{myGlMinorVersion} {};
 
     void check_attributes()
     {

@@ -51,15 +51,15 @@ Introduces "Whitted-style raytracing":
 https://www.cs.drexel.edu/~deb39/Classes/Papers/p343-whitted.pdf
 
 # Initial working bvh time stats
-| scene |  res     | rays | chunk_size | bounce_limit | time_without_bvh | time_with_bvh |
-| ----- | -------- | ---- | ---------- | ------------ | ---------------- | ------------- |
-| final | 1600x900 | 1    | 25x25px    | 50           | 38s              | 38s           |
-| final | 1600x900 | 2    | 25x25px    | 50           | 38s              | 38s           |
-| final | 1600x900 | 4    | 25x25px    | 50           | 38s              | 38s           |
-| final | 1600x900 | 8    | 25x25px    | 50           | 39s              | 38s           |
-| final | 1600x900 | 16   | 25x25px    | 50           | 48s              | 39s           |
-| final | 1600x900 | 32   | 25x25px    | 50           | 77s              | 48s           |
-| final | 1600x900 | 64   | 25x25px    | 50           | 140s             | 76s           |
-| final | 1600x900 | 128  | 25x25px    | 50           | 275s             | 138s          |
-| final | 1600x900 | 256  | 25x25px    | 50           | 544s             | 263s          |
-| final | 1600x900 | 512  | 25x25px    | 50           | 1082s            | 516s          |
+| scene |  res     | rays | chunk_size | bounce_limit | time_without_bvh | time_with_bvh | time_with_bvh_optimization |
+| ----- | -------- | ---- | ---------- | ------------ | ---------------- | ------------- | -------------------------- |
+| final | 1600x900 | 1    | 25x25px    | 50           | 38s              | 38s           |                            |
+| final | 1600x900 | 2    | 25x25px    | 50           | 38s              | 38s           |                            |
+| final | 1600x900 | 4    | 25x25px    | 50           | 38s              | 38s           |                            |
+| final | 1600x900 | 8    | 25x25px    | 50           | 39s              | 38s           |                            |
+| final | 1600x900 | 16   | 25x25px    | 50           | 48s              | 39s           |                            |
+| final | 1600x900 | 32   | 25x25px    | 50           | 77s              | 48s           |                            |
+| final | 1600x900 | 64   | 25x25px    | 50           | 140s             | 76s           |                            |
+| final | 1600x900 | 128  | 25x25px    | 50           | 275s             | 138s          | 111s                       |
+| final | 1600x900 | 256  | 25x25px    | 50           | 544s             | 263s          |                            |
+| final | 1600x900 | 512  | 25x25px    | 50           | 1082s            | 516s          |                            |

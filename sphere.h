@@ -21,21 +21,22 @@ class sphere : public hittable
     std::shared_ptr<material> mat;
     aabb bbox;
 
-    sphere(float my_radius, vec3 my_origin, vec3 my_path, std::shared_ptr<material> my_material) : hittable{48},  
-                radius{my_radius}, origin{my_origin}, path{my_path}, mat{my_material} 
+    sphere(float my_radius, vec3 my_origin, vec3 my_origin2, std::shared_ptr<material> my_material) : hittable{48},  
+                radius{my_radius}, origin{my_origin}, mat{my_material} 
                 {
+                    path = my_origin2 - origin;
+
                     vec3 rvec = vec3(radius, radius, radius);
-                    bbox = aabb(origin - rvec, origin + rvec);
+                    aabb box0 = aabb(origin - rvec, origin + rvec);
+                    aabb box1 = aabb(my_origin2 - rvec, my_origin2 + rvec);
+
+                    bbox = aabb(box0, box1);
                 }
     sphere(float my_radius, vec3 my_origin, std::shared_ptr<material> my_material) : hittable{48},  
                 radius{my_radius}, origin{my_origin}, path{vec3(0.0f, 0.0f, 0.0f)}, mat{my_material} 
                 {
                     vec3 rvec = vec3(radius, radius, radius);
-                    point3 origin1 = origin + path*1;
-                    aabb box0 = aabb(origin - rvec, origin + rvec);
-                    aabb box1 = aabb(origin1 - rvec, origin1 + rvec);
-
-                    bbox = aabb(box0, box1);
+                    bbox = aabb(origin - rvec, origin + rvec);
                 }
 
     aabb bounding_box() const override { return bbox; }
