@@ -222,7 +222,7 @@ void main()
     r.dir = frag_loc - ray_origin;
     r.albedo = vec3(1.0f, 1.0f, 1.0f);
     r.bounce = true;
-    r.time = random_float(state);
+    r.time = (random_float(state) / 2.0) + 0.5;
     
     colour += raycast(r, state);
   }
@@ -533,7 +533,7 @@ void dialectric(material m, inout hit h, inout ray r, inout rand_state state)
   float sin_theta =  sqrt(1.0 - cos_theta * cos_theta);
   bool cannot_refract = rel_refract_index * sin_theta > 1.0;
 
-  if (cannot_refract || shlick(cos_theta, rel_refract_index) > random_float(state)/2.0 + 1.0) {
+  if (cannot_refract || shlick(cos_theta, rel_refract_index) > (random_float(state)/2.0) + 0.5) {
     r.dir = reflect(unit_dir, unit_normal);
   } else { 
     r.dir = refract(unit_dir, unit_normal, rel_refract_index);

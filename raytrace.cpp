@@ -46,10 +46,10 @@ unsigned int indices[] = {
 };
 
 int SCREEN_WIDTH = 1600;
-int RENDER_WIDTH = 400;
+int RENDER_WIDTH = 800;
 float ASPECT_RATIO = 16.0/9.0;
 
-int NUM_SAMPLES = 100;
+int NUM_SAMPLES = 128;
 uint32_t BOUNCE_LIMIT = 50;
 
 float CHUNK_SIZE = 25.0f;
@@ -165,7 +165,7 @@ int main(int argc, char* args[])
     material_list materials = material_list();
     hittable_list objects = hittable_list();
 
-    load_final_scene(cam, materials, objects, matUBO, sphereUBO, bvhUBO);
+    load_three_spheres(cam, materials, objects, matUBO, sphereUBO, bvhUBO);
 
     colour clearcolour = colour(0.2f, 0.3f, 0.3f);
     // NOISEGEN PASS:
@@ -373,18 +373,23 @@ void load_three_spheres(Camera &cam, material_list &materials, hittable_list &ob
 
     // Add spheres
 
-    auto ground = std::make_shared<sphere>(sphere(100.0, vec3(0.0, -100.5, -1.0), mat_ground));
-    auto centre = std::make_shared<sphere>(sphere(0.5, vec3(0.0, 0.0, -1.2), mat_centre));
-    auto centre2 = std::make_shared<sphere>(sphere(0.5, vec3(0.0, 1.0, -1.2), mat_centre));
-    auto left = std::make_shared<sphere>(sphere(0.5, vec3(-1.0, 0.0, -1.0), mat_left));
+    auto ground = std::make_shared<sphere>(sphere(100.0, vec3(0.0, -100.5, -1.0), mat_right));
+    auto centre = std::make_shared<sphere>(sphere(0.5, vec3(0.0, 0.0, -1.2), mat_left));
+    auto centre_bubble = std::make_shared<sphere>(sphere(0.4, vec3(0.0, 0.0, -1.2), mat_left_bubble));
+    auto centre2 = std::make_shared<sphere>(sphere(0.5, vec3(0.0, 1.0, -1.2), mat_right));
+    auto left = std::make_shared<sphere>(sphere(0.5, vec3(-1.0, 0.0, -1.0), mat_right));
     auto left_bubble = std::make_shared<sphere>(sphere(0.4, vec3(-1.0, 0.0, -1.0), mat_left_bubble));
     auto right = std::make_shared<sphere>(sphere(0.5, vec3(1.0, 0.0, -1.0), mat_right));
 
     objects.add(ground);
     objects.add(centre);
-    //objects.add(centre2);
+    //std::cout << "Sphere origin coords: " << centre->origin << "\n";
+    //std::cout << "Sphere path: " << centre->path << "\n";
+    //std::cout << "Sphere bbox: " << centre->bbox << "\n";
+    objects.add(centre_bubble);
+    objects.add(centre2);
     objects.add(left);
-    objects.add(left_bubble);
+    //objects.add(left_bubble);
     objects.add(right);
 
     std::cout << objects.bounding_box();
