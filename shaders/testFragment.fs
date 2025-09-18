@@ -85,6 +85,7 @@ struct bvh_node
 {
   int leaf;
   int obj_idx;
+  int obj_type;
   int hit_id;
   int miss_id;
   vec2[3] intervals;

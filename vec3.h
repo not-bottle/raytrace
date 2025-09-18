@@ -5,6 +5,8 @@
 #include <cstdlib>
 #include <iostream>
 
+#include <glm/glm.hpp>
+
 // Constants
 
 const float pi = 3.1415926535897932385;
@@ -31,6 +33,7 @@ class vec3 {
 
         vec3() : e{0, 0, 0} {};
         vec3(float e0, float e1, float e2) : e{e0, e1, e2} {};
+        vec3(glm::vec3 glmv) : e{glmv.x, glmv.y, glmv.z} {};
 
         float x() const {return e[0];}
         float y() const {return e[1];}

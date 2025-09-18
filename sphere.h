@@ -21,7 +21,7 @@ class sphere : public hittable
     std::shared_ptr<material> mat;
     aabb bbox;
 
-    sphere(float my_radius, vec3 my_origin, vec3 my_origin2, std::shared_ptr<material> my_material) : hittable{48},  
+    sphere(float my_radius, vec3 my_origin, vec3 my_origin2, std::shared_ptr<material> my_material) : hittable{48, SPHERE},  
                 radius{my_radius}, origin{my_origin}, mat{my_material} 
                 {
                     path = my_origin2 - origin;
@@ -32,7 +32,7 @@ class sphere : public hittable
 
                     bbox = aabb(box0, box1);
                 }
-    sphere(float my_radius, vec3 my_origin, std::shared_ptr<material> my_material) : hittable{48},  
+    sphere(float my_radius, vec3 my_origin, std::shared_ptr<material> my_material) : hittable{48, SPHERE},  
                 radius{my_radius}, origin{my_origin}, path{vec3(0.0f, 0.0f, 0.0f)}, mat{my_material} 
                 {
                     vec3 rvec = vec3(radius, radius, radius);

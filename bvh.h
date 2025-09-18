@@ -11,10 +11,12 @@
 #include "aabb.h"
 #include "randgen.h"
 
+const int BVH_SIZE = 80;
+
 class bvh_node : public hittable {
     public:
     bvh_node() {}
-    bvh_node(std::shared_ptr<hittable> &object) : object{object}, leaf{1}, bbox{object->bounding_box()} {}
+    bvh_node(std::shared_ptr<hittable> &object) : object{object}, obj_type{object->type}, leaf{1}, bbox{object->bounding_box()} {}
     bvh_node(hittable_list list) : bvh_node(list.objects, 0, list.objects.size()) {}
 
     bvh_node(std::vector<std::shared_ptr<hittable>> &objects, size_t start, size_t end) 
@@ -143,16 +145,17 @@ class bvh_node : public hittable {
             
             ubo.sub(&(node->leaf), sizeof(int), offset + offset0);
             ubo.sub(&obj_idx, sizeof(int), offset + offset0 + 4);
-            ubo.sub(&hit_id, sizeof(int), offset + offset0 + 8);
-            ubo.sub(&miss_id, sizeof(int), offset + offset0 + 12);
-            ubo.sub(&(node->bbox.x.min), sizeof(float), offset + offset0 + 16);
-            ubo.sub(&(node->bbox.x.max), sizeof(float), offset + offset0 + 20);
-            ubo.sub(&(node->bbox.y.min), sizeof(float), offset + offset0 + 32);
-            ubo.sub(&(node->bbox.y.max), sizeof(float), offset + offset0 + 36);
-            ubo.sub(&(node->bbox.z.min), sizeof(float), offset + offset0 + 48);
-            ubo.sub(&(node->bbox.z.max), sizeof(float), offset + offset0 + 52);
+            ubo.sub(&obj_type, sizeof(int), offset + offset0 + 8);
+            ubo.sub(&hit_id, sizeof(int), offset + offset0 + 12);
+            ubo.sub(&miss_id, sizeof(int), offset + offset0 + 16);
+            ubo.sub(&(node->bbox.x.min), sizeof(float), offset + offset0 + 32);
+            ubo.sub(&(node->bbox.x.max), sizeof(float), offset + offset0 + 36);
+            ubo.sub(&(node->bbox.y.min), sizeof(float), offset + offset0 + 48);
+            ubo.sub(&(node->bbox.y.max), sizeof(float), offset + offset0 + 52);
+            ubo.sub(&(node->bbox.z.min), sizeof(float), offset + offset0 + 64);
+            ubo.sub(&(node->bbox.z.max), sizeof(float), offset + offset0 + 68);
 
-            offset0 += 64;
+            offset0 += BVH_SIZE;
 
             queue.pop();
         }
@@ -166,6 +169,8 @@ class bvh_node : public hittable {
     std::shared_ptr<bvh_node> hit_node = NULL;
     std::shared_ptr<bvh_node> miss_node = NULL;
     aabb bbox;
+
+    HITTABLE_TYPE obj_type;
 
     static randgen rand;
 

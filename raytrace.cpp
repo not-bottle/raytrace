@@ -26,6 +26,8 @@
 
 #include "bvh.h"
 
+#include "model.h"
+
 #include <unistd.h>
 
 void load_three_spheres(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO, UBO bvhUBO);
@@ -52,7 +54,7 @@ float ASPECT_RATIO = 16.0/9.0;
 int NUM_SAMPLES = 128;
 uint32_t BOUNCE_LIMIT = 50;
 
-float CHUNK_SIZE = 25.0f;
+float CHUNK_SIZE = 50.0f;
 
 // Other constants
 const int MAX_NUM_OBJECTS = 512;
@@ -165,7 +167,7 @@ int main(int argc, char* args[])
     material_list materials = material_list();
     hittable_list objects = hittable_list();
 
-    load_three_spheres(cam, materials, objects, matUBO, sphereUBO, bvhUBO);
+    load_final_scene(cam, materials, objects, matUBO, sphereUBO, bvhUBO);
 
     colour clearcolour = colour(0.2f, 0.3f, 0.3f);
     // NOISEGEN PASS:
@@ -308,6 +310,7 @@ void load_grid_scene(Camera &cam, material_list &materials, hittable_list &objec
     uvw.vfov = 90.0;
     uvw.defocus_angle = 0.0;
     uvw.focus_dist = 10;
+    Assimp::Importer import;
 
     cam.cameraSetup(uvw);
 
@@ -373,12 +376,13 @@ void load_three_spheres(Camera &cam, material_list &materials, hittable_list &ob
 
     // Add spheres
 
-    auto ground = std::make_shared<sphere>(sphere(100.0, vec3(0.0, -100.5, -1.0), mat_right));
+    auto ground = std::make_shared<sphere>(sphere(100.0, vec3(0.0, -100.5, -1.0), mat_ground));
     auto centre = std::make_shared<sphere>(sphere(0.5, vec3(0.0, 0.0, -1.2), mat_left));
     auto centre_bubble = std::make_shared<sphere>(sphere(0.4, vec3(0.0, 0.0, -1.2), mat_left_bubble));
+    auto centre_bubble_bubble = std::make_shared<sphere>(sphere(0.3, vec3(0.0, 0.0, -1.2), mat_centre));
     auto centre2 = std::make_shared<sphere>(sphere(0.5, vec3(0.0, 1.0, -1.2), mat_right));
-    auto left = std::make_shared<sphere>(sphere(0.5, vec3(-1.0, 0.0, -1.0), mat_right));
-    auto left_bubble = std::make_shared<sphere>(sphere(0.4, vec3(-1.0, 0.0, -1.0), mat_left_bubble));
+    auto left = std::make_shared<sphere>(sphere(0.5, vec3(-1.0, 0.0, -1.0), mat_left));
+    auto left_bubble = std::make_shared<sphere>(sphere(0.4, vec3(-1.0, 0.0, -1.0), mat_centre));
     auto right = std::make_shared<sphere>(sphere(0.5, vec3(1.0, 0.0, -1.0), mat_right));
 
     objects.add(ground);
@@ -387,9 +391,10 @@ void load_three_spheres(Camera &cam, material_list &materials, hittable_list &ob
     //std::cout << "Sphere path: " << centre->path << "\n";
     //std::cout << "Sphere bbox: " << centre->bbox << "\n";
     objects.add(centre_bubble);
+    objects.add(centre_bubble_bubble);
     objects.add(centre2);
     objects.add(left);
-    //objects.add(left_bubble);
+    objects.add(left_bubble);
     objects.add(right);
 
     std::cout << objects.bounding_box();
