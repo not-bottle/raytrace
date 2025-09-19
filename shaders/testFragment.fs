@@ -46,6 +46,7 @@ struct rand_state {
 
 struct hit
 {
+  float t;
   vec3 point;
   vec3 normal;
   bool hit;
@@ -79,6 +80,13 @@ struct sphere
   float radius;
   vec3 origin;
   vec3 path;
+};
+
+struct triangle
+{
+  vec3[3] p;
+  vec3 normal;
+  int mat;
 };
 
 struct bvh_node
@@ -120,6 +128,11 @@ layout (std140) uniform Spheres
   sphere[512] spheres;
 };
 
+layout (std140) uniform Triangles
+{
+  triangle[4096] triangles;
+};
+
 layout (std140) uniform BVH
 {
   bvh_node[1536] bvh;
@@ -127,7 +140,10 @@ layout (std140) uniform BVH
 
 bool near_zero(vec3 v);
 
+float hit_obj(bvh_node node, inout ray r, inout hit h);
+
 float hit_sphere(vec3 origin, float radius, inout ray r);
+float hit_triangle(triangle triangle, inout ray r);
 hit hit_any(inout ray r);
 hit hit_any_bvh(inout ray r);
 bool bbox_intersect(inout ray r, bvh_node node);
@@ -334,13 +350,7 @@ hit hit_any_bvh(inout ray r)
   h.normal = vec3(0.0f, 0.0f, 0.0f);
   h.hit = false;
   h.interior = false;
-
-  sphere s;
-  sphere new_sphere;
-  float new_t;
-  float t = -1.0f;
-
-  vec3 origin_in_time;
+  h.t = -1.0f;
 
   int idx = 0;
   bvh_node node;
@@ -352,13 +362,7 @@ hit hit_any_bvh(inout ray r)
     node = bvh[idx];
     if (bbox_intersect(r, node)) {
       if (node.leaf == 1) {
-        new_sphere = spheres[node.obj_idx];
-        origin_in_time = new_sphere.origin + new_sphere.path*r.time;
-        new_t = hit_sphere(origin_in_time, new_sphere.radius, r);
-        if (t < 0 || (new_t < t && new_t > 0.001)) {
-          t = new_t;
-          s = new_sphere;
-        }
+        hit_obj(node, r, h);
       }
       idx = node.hit_id;
     } else { 
@@ -368,15 +372,13 @@ hit hit_any_bvh(inout ray r)
     count += 1;
   }
 
-  if (t > 0.001f)
+  if (h.t > 0.001f)
   {
-    h.point = r.origin + r.dir*t;
-    h.normal = (h.point - s.origin) / s.radius;
+    h.point = r.origin + r.dir*h.t;
     if (dot(h.normal, r.dir) >= 0) {
       h.normal = -h.normal;
       h.interior = true;
     }
-    h.mat = s.mat;
     h.hit = true;
   }
 
@@ -453,6 +455,37 @@ bool bbox_intersect(inout ray r, bvh_node node) {
   return true;
 }
 
+float hit_obj(bvh_node node, inout ray r, inout hit h)
+{
+  float new_t;
+  vec3 new_point;
+  vec3 new_normal;
+  int new_mat;
+
+  if (node.obj_type == 0) {
+    triangle tri = triangles[node.obj_idx];
+    new_t = hit_triangle(tri, r);
+    new_normal = vec3(1.0f, 1.0f, 1.0f);
+    new_mat = tri.mat;
+  } else if (node.obj_type == 1) {
+    sphere s = spheres[node.obj_idx];
+    vec3 origin_in_time = s.origin + s.path*r.time;
+    new_t = hit_sphere(origin_in_time, s.radius, r);
+    new_point = r.origin + r.dir*new_t;
+    new_normal = (new_point - s.origin) / s.radius;
+    new_mat = s.mat;
+  }
+
+  if (h.t < 0 || (new_t < h.t && new_t > 0.001)) {
+      h.t = new_t;
+      h.point = new_point;
+      h.normal = new_normal;
+      h.mat = new_mat;
+  }
+
+  return new_t;
+}
+
 
 float hit_sphere(vec3 origin, float radius, inout ray r)
 {
@@ -476,6 +509,11 @@ float hit_sphere(vec3 origin, float radius, inout ray r)
   } else {
     return -1.0f;
   }
+}
+
+float hit_triangle(triangle triangle, inout ray r)
+{
+  return -1.0f;
 }
 
 void material_shade(inout hit h, inout ray r, inout rand_state state)

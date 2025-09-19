@@ -115,6 +115,7 @@ class bvh_node : public hittable {
                 queue.push(node->right);
             } else {
                 obj_idx = node->object->id;
+                obj_type = node->object->type;
 
                 if (node->hit_node != NULL) {
                     hit_id = node->hit_node->id;

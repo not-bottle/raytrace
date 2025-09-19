@@ -48,13 +48,13 @@ unsigned int indices[] = {
 };
 
 int SCREEN_WIDTH = 1600;
-int RENDER_WIDTH = 800;
+int RENDER_WIDTH = 400;
 float ASPECT_RATIO = 16.0/9.0;
 
-int NUM_SAMPLES = 128;
+int NUM_SAMPLES = 32;
 uint32_t BOUNCE_LIMIT = 50;
 
-float CHUNK_SIZE = 50.0f;
+float CHUNK_SIZE = 25.0f;
 
 // Other constants
 const int MAX_NUM_OBJECTS = 512;

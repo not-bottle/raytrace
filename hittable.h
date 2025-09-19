@@ -19,7 +19,7 @@ class hittable
     HITTABLE_TYPE type;
 
     hittable() : size{0} {};
-    hittable(int my_size, HITTABLE_TYPE type) : size{my_size}, type{type} {};
+    hittable(int my_size, HITTABLE_TYPE my_type) : size{my_size}, type{my_type} {};
 
     virtual void toUBO(UBO ubo, int offset) = 0;
 

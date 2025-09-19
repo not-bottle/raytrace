@@ -369,6 +369,18 @@ class UBO {
     glBufferSubData(GL_UNIFORM_BUFFER, start, sizeof(float) * 4, &data);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
     }
+
+    void subVec3to4(const vec3 &data, const float &w, int start)
+    {
+    glBindBuffer(GL_UNIFORM_BUFFER, id);
+    float vec4[4];
+    vec4[0] = data.x();
+    vec4[1] = data.y();
+    vec4[2] = data.z();
+    vec4[3] = w;
+    glBufferSubData(GL_UNIFORM_BUFFER, start, sizeof(float) * 4, &vec4);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    }
 };
 
 #endif
