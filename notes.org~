@@ -1,1 +1,76 @@
 * <2025-09-05 Fri> Fixed motion blur with BVH!
+* <2025-09-19 Fri> Todo for ray triangle intersection (afaik)
+1. Rewrite the hittable toUBO function to somehow nicely handle
+   triangles and spheres (extensible to eventually planes/boxes?)
+   - They will need to all be in the same list so that the bvh and
+     bounding box construction works automatically.
+   - The main consideration is taking in UBO objects (e.g. if there's
+     no triangles, do I still pass the UBO?), and also storing the
+     indexes properly (but that's not so bad)
+2. Write the hit triangle code in the shader. Also need to do a hit
+   normal calculation for each triangle? (Or do I? Haven't I got the
+   normal stored for each triangle already...)
+* <2025-09-24 Wed> Look into path tracing pipeline
+- Also just think about it. See which steps I can break up into
+  separate shaders, what might be better to do on the cpu, stuff that
+  could be run concurrently? (CPU and GPU)
+- Idea is performance but also to avoid having a mega behemoth
+  fragment shader
+- Before :: This step though I need to work out how to translate stuff
+  into compute shaders! (Make a branch for this maybe)
+* <2025-10-13 Mon> Plan going forward
+- Optimizing and refactoring the GPU stuff is a lot to handle! On top
+  of adding in triangles, finishing off the other stuff in the next
+  week...
+- So, my plan going forward is ::
+  1. Redo RTweekend as a refresher, up to implemnenting BVH, all on
+     the CPU! (re-use the code obviously) (Modularize some of the
+     features e.g. motion blur)
+  2. Add in triangles
+  3. Modularize it so that I can speed up algorithms separately on the
+     GPU! (I don't see any reason why I shouldn't be able to do BVH
+     traversal in its own shader, for example). This will probably run
+     into issues as the whole ray tracing loop is sort of nested, so if
+     GPU things aren't "leaves" then I can't see them working
+     * As part of this I'll probably have to write some practice
+       compute shaders, but I'm sure once I understand the process it
+       won't be so different
+  4. Continue work in this way until I finish both the rest of the
+     books: Implement on CPU, translate into GPU if possible.
+  5. I'm sure I'll run into some issues so it may not be this smooth
+     lol
+- The idea is kinda:
+  * Each pixel is one independent chain of bouncing rays
+  * The algorithm is
+    1. Get ray
+    2. Calculate collision
+    3. Get new ray from material
+    4. Repeat until depth reached or no collision
+  * So if you could split the steps into
+    1. Send single rays to gpu to find collision
+    2. Send these rays to gpu to do material calculation (separate shaders?)
+    3. Feed resultant rays back into first algo (there may be some
+       rays that are "finished" at each step)
+  * In this way it can be split into at least 2 shaders. Might make
+    randomness harder or easier idk. But the CPU can do stuff
+    intemediarily
+* <2025-10-13 Mon> Finishing off adding triangles
+- Debugging woes
+  * Something is segfaulting in the bvh code because of an esoteric
+    reason
+  * One thing to consider: The material shared by the triangles is
+    being used a crazy amount of times
+* GPU Study
+** Fundamentals of GPU Architecture
+[[https://www.youtube.com/watch?v=4Pi424VJgcE&list=PLxNPSjHT5qvscDTMaIAY9boOOXAJAS7y4&index=1][Fundamentals of GPU Architechture: Introduction]] 
+** CUDA Programming Guide
+[[https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#performance-guidelines][CUDA Guide]]
+*** Chapter 3 - Introduction
+*** Chapter 5 - Programming Model
+*** Chapter 7 - Hardware Implementation
+*** Chapter 8 Performance Guidelines
+** GPU Gems
+*** Gems 1 Part V: Performance and Practicalities
+[[https://developer.nvidia.com/gpugems/gpugems/part-v-performance-and-practicalities][Performance and Practicalities]]
+*** Gems 2 Part IV: General-Purpose Computation on GPUs
+[[https://developer.nvidia.com/gpugems/gpugems2/part-iv-general-purpose-computation-gpus-primer][GPGPU: A Primer]]

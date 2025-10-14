@@ -10,7 +10,7 @@ LDFLAGS = -lSDL2 -lGL -lX11 -lpthread -lXrandr -lXi -ldl
 CPLUS_INCLUDE_PATH = ./include
 
 all: $(FILE).cpp
-	$(CXX) $(FILE).cpp $(OTHERS) -I$(CPLUS_INCLUDE_PATH) -L $(LINK) $(LDFLAGS) -o $(FILE)
+	$(CXX) $(FILE).cpp $(OTHERS) -I$(CPLUS_INCLUDE_PATH) -L $(LINK) $(LDFLAGS) -g -o $(FILE)
 
 compute: $(COMPUTE).cpp
 	$(CXX) $(COMPUTE).cpp $(OTHERS) -I$(CPLUS_INCLUDE_PATH) -L $(LINK) $(LDFLAGS) -o $(COMPUTE)

@@ -13,7 +13,7 @@
 // std140 layout size
 // Must be a multiple of 4N where N = 4 bytes
 // P[3] = 3*16 (vec3 stored as vec4)
-// normal = 16
+// normal = 16 ** Removed from UBO for size reasons
 // mat = 4
 // 4*16 + 4 = 68, pad to 80
 const int SIZE = 80;
@@ -25,20 +25,20 @@ class triangle : public hittable {
     std::shared_ptr<material> mat;
     aabb bbox;
 
-    triangle(glm::vec3 a, glm::vec3 b, glm::vec3 c, std::shared_ptr<material> material) : hittable{SIZE, TRIANGLE}, mat{material},
+    triangle(vec3 a, vec3 b, vec3 c, std::shared_ptr<material> material) : hittable{SIZE, TRIANGLE}, mat{material},
         P{vec3(a), vec3(b), vec3(c)}
     {
         // CCW?
-        glm::vec3 ac = c - a;
-        glm::vec3 ab = b - a;
-        normal = vec3(glm::normalize(glm::cross(ac, ab)));
+        vec3 ac = c - a;
+        vec3 ab = b - a;
+        normal = vec3(unit_vector(cross(ac, ab)));
 
-        interval x = interval((a.x < b.x) ? ((a.x < c.x) ? a.x : c.x) : ((b.x < c.x) ? b.x : c.x), 
-                                (a.x > b.x) ? ((a.x > c.x) ? a.x : c.x) : ((b.x > c.x) ? b.x : c.x));
-        interval y = interval((a.y < b.y) ? ((a.y < c.y) ? a.y : c.y) : ((b.y < c.y) ? b.y : c.y), 
-                                (a.y > b.y) ? ((a.y > c.y) ? a.y : c.y) : ((b.y > c.y) ? b.y : c.y));
-        interval z = interval((a.z < b.z) ? ((a.z < c.z) ? a.z : c.z) : ((b.z < c.z) ? b.z : c.z), 
-                                (a.z > b.z) ? ((a.z > c.z) ? a.z : c.z) : ((b.z > c.z) ? b.z : c.z));
+        interval x = interval((a.x() < b.x()) ? ((a.x() < c.x()) ? a.x() : c.x()) : ((b.x() < c.x()) ? b.x() : c.x()), 
+                                (a.x() > b.x()) ? ((a.x() > c.x()) ? a.x() : c.x()) : ((b.x() > c.x()) ? b.x() : c.x()));
+        interval y = interval((a.y() < b.y()) ? ((a.y() < c.y()) ? a.y() : c.y()) : ((b.y() < c.y()) ? b.y() : c.y()), 
+                                (a.y() > b.y()) ? ((a.y() > c.y()) ? a.y() : c.y()) : ((b.y() > c.y()) ? b.y() : c.y()));
+        interval z = interval((a.z() < b.z()) ? ((a.z() < c.z()) ? a.z() : c.z()) : ((b.z() < c.z()) ? b.z() : c.z()), 
+                                (a.z() > b.z()) ? ((a.z() > c.z()) ? a.z() : c.z()) : ((b.z() > c.z()) ? b.z() : c.z()));
         bbox = aabb(x, y, z);
     }
 

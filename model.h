@@ -13,6 +13,9 @@
 
 #include "mesh.h"
 #include "shader.h"
+#include "triangle.h"
+#include "material.h"
+#include "hittable_list.h"
 
 #include <string>
 #include <fstream>
@@ -44,6 +47,20 @@ public:
     {
         for(unsigned int i = 0; i < meshes.size(); i++)
             meshes[i].Draw(shader);
+    }
+
+    void toHittable(hittable_list &hittables, std::shared_ptr<material> material) {
+        int acc = 0;
+        for (int i = 0; i < meshes.size(); i++) {
+            Mesh m = meshes[i];
+            for (int j = 0; j < m.indices.size(); j += 3) {
+                hittables.add(std::make_shared<triangle>(triangle(m.vertices[m.indices[j]].Position, 
+                                        m.vertices[m.indices[j + 1]].Position, 
+                                        m.vertices[m.indices[j + 2]].Position, material)));
+                acc += 1;
+            }
+        }
+        std::cout << "Number of triangles in mesh: " << acc << std::endl;
     }
     
 private:

@@ -33,6 +33,7 @@
 void load_three_spheres(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO, UBO bvhUBO);
 void load_final_scene(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO, UBO bvhUBO);
 void load_grid_scene(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO, UBO bvhUBO);
+void load_model(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO, UBO bvhUBO);
 
 float vertices[] = {
     // positions         // texture coords
@@ -167,7 +168,7 @@ int main(int argc, char* args[])
     material_list materials = material_list();
     hittable_list objects = hittable_list();
 
-    load_final_scene(cam, materials, objects, matUBO, sphereUBO, bvhUBO);
+    load_model(cam, materials, objects, matUBO, sphereUBO, bvhUBO);
 
     colour clearcolour = colour(0.2f, 0.3f, 0.3f);
     // NOISEGEN PASS:
@@ -297,6 +298,47 @@ int main(int argc, char* args[])
     c.close();
 
     return 0;
+}
+
+void load_model(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO, UBO bvhUBO) {
+    // Add Materials
+
+    Camera::orientation uvw;
+
+    uvw.lookfrom = point3(0, 0, -100);
+    uvw.lookat = point3(0, 0, -1);
+    uvw.vup = vec3(0, 1, 0);
+    uvw.vfov = 90.0;
+    uvw.defocus_angle = 0.0;
+    uvw.focus_dist = 10;
+
+    cam.cameraSetup(uvw);
+
+    auto mat_ground = std::make_shared<material>(lambertian(vec3(0.8, 0.8, 0.0)));
+    auto mat_centre = std::make_shared<material>(lambertian(vec3(0.1, 0.2, 0.5)));
+
+    materials.add(mat_ground);
+    materials.add(mat_centre);
+
+    // Add Spheres
+
+    auto ground = std::make_shared<sphere>(sphere(100.0, vec3(0.0, -100.5, -1.0), mat_ground));
+    objects.add(ground);
+
+    // Add Model
+    // backpack num vertices: 1680 (* 3 * 32) = 161280 bytes
+    // backpack num indices: 1680
+    std::string backpackPath = "backpack/backpack.obj";
+    Model backpack = Model(backpackPath.c_str());
+
+    backpack.toHittable(objects, mat_centre);
+
+    std::cout << objects.bounding_box();
+    bvh_node bvh = bvh_node(objects);
+    std::cout << bvh.bounding_box();
+    objects.toUBO(sphereUBO);
+    materials.toUBO(matUBO);
+    bvh.toUBO(bvhUBO, 0);
 }
 
 void load_grid_scene(Camera &cam, material_list &materials, hittable_list &objects, UBO matUBO, UBO sphereUBO, UBO bvhUBO) {

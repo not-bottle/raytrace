@@ -130,7 +130,7 @@ layout (std140) uniform Spheres
 
 layout (std140) uniform Triangles
 {
-  triangle[4096] triangles;
+  triangle[67907] triangles;
 };
 
 layout (std140) uniform BVH
@@ -465,7 +465,8 @@ float hit_obj(bvh_node node, inout ray r, inout hit h)
   if (node.obj_type == 0) {
     triangle tri = triangles[node.obj_idx];
     new_t = hit_triangle(tri, r);
-    new_normal = vec3(1.0f, 1.0f, 1.0f);
+    new_point = r.origin + r.dir*new_t;
+    new_normal = tri.normal;
     new_mat = tri.mat;
   } else if (node.obj_type == 1) {
     sphere s = spheres[node.obj_idx];
@@ -513,7 +514,7 @@ float hit_sphere(vec3 origin, float radius, inout ray r)
 
 float hit_triangle(triangle triangle, inout ray r)
 {
-  return -1.0f;
+  return 1.0f;
 }
 
 void material_shade(inout hit h, inout ray r, inout rand_state state)

@@ -41,17 +41,17 @@ class bvh_node : public hittable {
         size_t object_span = end - start;
 
         if (object_span == 1) {
-            left = std::make_shared<bvh_node>(objects[start]);
-            right = std::make_shared<bvh_node>(objects[start]);
+            left = std::make_shared<bvh_node>(bvh_node(objects[start]));
+            right = std::make_shared<bvh_node>(bvh_node(objects[start]));
         } else if (object_span == 2) {
-            left = std::make_shared<bvh_node>(objects[start]);
-            right = std::make_shared<bvh_node>(objects[start+1]);
+            left = std::make_shared<bvh_node>(bvh_node(objects[start]));
+            right = std::make_shared<bvh_node>(bvh_node(objects[start+1]));
         } else {
             std::sort(std::begin(objects) + start, std::begin(objects) + end, comparator);
 
             size_t mid = start + object_span/2;
-            left = std::make_shared<bvh_node>(objects, start, mid);
-            right = std::make_shared<bvh_node>(objects, mid, end);
+            left = std::make_shared<bvh_node>(bvh_node(objects, start, mid));
+            right = std::make_shared<bvh_node>(bvh_node(objects, mid, end));
         }
 
         // Removed due to bbox optimization constructing each bbox from the list of objects
@@ -135,6 +135,7 @@ class bvh_node : public hittable {
             // interval-y - 2*4bytes (blank)
             // interval-z - 2*4bytes (blank)
 
+
             #ifdef DEBUG
             std::cout << "Node - "  << node->id << std::endl;
             std::cout << "leaf: " << node->leaf << std::endl;
@@ -159,7 +160,7 @@ class bvh_node : public hittable {
             offset0 += BVH_SIZE;
 
             queue.pop();
-        }
+        };
     }
 
     int leaf = 0;

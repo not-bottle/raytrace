@@ -1,3 +1,3 @@
 #!/bin/bash
 
-env LD_LIBRARY_PATH=./src ./raytrace
+env LD_LIBRARY_PATH=./src gdb ./raytrace
