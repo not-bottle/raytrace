@@ -60,6 +60,19 @@
     reason
   * One thing to consider: The material shared by the triangles is
     being used a crazy amount of times
+* <2025-10-14 Tue> Issues to still address
+- Size of packing things like lots of triangles is approaching the UBO
+  limit, can look into SSBOs and probably packing things more
+  effectively
+- Need a separate UBO for triangles (haven't implemented that yet)
+- Probably also need to separate triangles and indices? Unless the
+  models I'm using don't need indicies? (It's a bit difficult bc you
+  can't have this be dynamic in the shader if using UBOs)
+- TBH I think I'd like to restart and do it all on the CPU
+  straightforwardly up to the point where I am to make this
+  easier. Then I can actually go through methodically and measure all
+  the speedups and stuff, as opposed to having this giant behemoth
+  shader
 * GPU Study
 ** Fundamentals of GPU Architecture
 [[https://www.youtube.com/watch?v=4Pi424VJgcE&list=PLxNPSjHT5qvscDTMaIAY9boOOXAJAS7y4&index=1][Fundamentals of GPU Architechture: Introduction]] 
